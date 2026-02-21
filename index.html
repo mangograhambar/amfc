@@ -1,0 +1,1828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Annual Mechanical Fees Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f5f5f7;
+  --surface:#ffffff;
+  --surface2:#f5f5f7;
+  --border:#d2d2d7;
+  --border-light:#e5e5ea;
+  --text-primary:#1d1d1f;
+  --text-secondary:#6e6e73;
+  --text-tertiary:#a1a1a6;
+  --accent:#0071e3;
+  --accent-hover:#0077ed;
+  --accent-dim:rgba(0,113,227,.08);
+  --red:#ff3b30;
+  --red-dim:rgba(255,59,48,.07);
+  --green:#34c759;
+  --warn-bg:#fff8e6;
+  --warn-border:#ffe0a0;
+  --warn-text:#7d5800;
+  --radius-sm:8px;
+  --radius-md:12px;
+  --radius-lg:16px;
+  --shadow-card:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.06);
+  --shadow-lifted:0 2px 8px rgba(0,0,0,.08),0 8px 32px rgba(0,0,0,.08);
+  --font:'Inter',-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;
+  --mono:'SF Mono','Fira Mono','Consolas',monospace;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+body{font-family:var(--font);background:var(--bg);min-height:100vh;padding:32px 20px;color:var(--text-primary);}
+
+/* ── SHELL ── */
+.shell{max-width:960px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
+
+/* ── HEADER ── */
+.header{background:var(--surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);padding:28px 36px;display:flex;align-items:center;gap:20px;}
+.header-icon{width:44px;height:44px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.header-icon svg{width:22px;height:22px;fill:none;stroke:white;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.header-text h1{font-size:17px;font-weight:600;letter-spacing:-.02em;color:var(--text-primary);}
+.header-text p{font-size:12px;color:var(--text-secondary);margin-top:2px;letter-spacing:.01em;}
+
+/* ── CARD ── */
+.card{background:var(--surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);overflow:hidden;}
+
+/* ── SECTION HEADER ── */
+.sec-hdr{padding:16px 24px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:10px;}
+.sec-hdr-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0;}
+.sec-hdr-title{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-secondary);}
+
+/* ── ENTRY FORM ── */
+.entry-body{padding:20px 24px;}
+.entry-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;align-items:end;}
+.fg{display:flex;flex-direction:column;gap:5px;}
+.fg label{font-size:11px;font-weight:500;color:var(--text-secondary);letter-spacing:.01em;}
+.fg input,.fg select{
+  padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);
+  font-size:13px;font-family:var(--font);background:var(--surface);color:var(--text-primary);
+  transition:border-color .15s,box-shadow .15s;width:100%;appearance:none;-webkit-appearance:none;}
+.fg select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236e6e73'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center;padding-right:28px;}
+.fg input:focus,.fg select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
+.fg input::placeholder{color:var(--text-tertiary);}
+.fg.fg-cat{grid-column:1/-1;}
+.fg.fg-desc{grid-column:1/-1;}
+.input-w-unit{display:flex;gap:6px;}
+.input-w-unit input{flex:1;min-width:0;}
+.input-w-unit select{flex:0 0 68px;width:68px;}
+.opt-tag{font-size:10px;color:var(--text-tertiary);margin-left:4px;font-weight:400;}
+
+/* ── BUTTONS ── */
+.btn-row{display:flex;gap:8px;align-items:center;margin-top:16px;flex-wrap:wrap;}
+.btn-add{
+  background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);
+  padding:9px 22px;font-size:13px;font-weight:500;font-family:var(--font);
+  cursor:pointer;letter-spacing:-.01em;transition:background .15s,transform .1s;white-space:nowrap;}
+.btn-add:hover{background:var(--accent-hover);}
+.btn-add:active{transform:scale(.98);}
+.btn-reset{
+  background:transparent;color:var(--red);border:1px solid rgba(255,59,48,.3);border-radius:var(--radius-sm);
+  padding:9px 18px;font-size:13px;font-weight:500;font-family:var(--font);
+  cursor:pointer;transition:background .15s;white-space:nowrap;}
+.btn-reset:hover{background:var(--red-dim);}
+
+.btn-export{
+  background:var(--text-primary);color:white;border:none;border-radius:var(--radius-sm);
+  padding:10px 24px;font-size:13px;font-weight:500;font-family:var(--font);
+  cursor:pointer;letter-spacing:-.01em;transition:background .15s,transform .1s;
+  display:flex;align-items:center;justify-content:center;width:100%;}
+.btn-export:hover{background:#2d2d30;}
+.btn-export:active{transform:scale(.98);}
+.btn-export svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+
+
+/* ── EQUIPMENT LIST ── */
+.eq-list-wrap{margin-top:16px;border-top:1px solid var(--border-light);padding-top:14px;}
+.eq-list-lbl{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:8px;}
+.eq-item{
+  display:flex;justify-content:space-between;align-items:center;
+  background:var(--surface2);border:1px solid var(--border-light);border-radius:var(--radius-sm);
+  padding:10px 14px;margin-bottom:6px;transition:box-shadow .15s;}
+.eq-item:hover{box-shadow:var(--shadow-card);}
+.eq-item-info{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.eq-cat{font-size:12px;font-weight:500;color:var(--text-primary);}
+.eq-detail{font-size:11px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.btn-del{
+  background:none;border:none;color:var(--text-tertiary);font-size:15px;
+  cursor:pointer;padding:4px 8px;border-radius:6px;flex-shrink:0;line-height:1;
+  transition:color .15s,background .15s;}
+.btn-del:hover{color:var(--red);background:var(--red-dim);}
+
+/* ── BREAKDOWN ── */
+.bd-empty{text-align:center;color:var(--text-tertiary);font-size:13px;padding:36px;letter-spacing:.01em;}
+
+.cat-block{border-bottom:1px solid var(--border-light);}
+.cat-block:last-child{border-bottom:none;}
+.cat-hdr{
+  background:var(--surface2);padding:10px 24px;font-size:10px;font-weight:600;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--text-secondary);
+  border-bottom:1px solid var(--border-light);}
+
+.eb-wrap{border-bottom:1px solid var(--border-light);}
+.eb-wrap:last-of-type{border-bottom:none;}
+.eb{padding:14px 24px;}
+
+.eb-hdr{display:flex;flex-direction:column;gap:2px;margin-bottom:10px;}
+.eb-hdr-title{font-size:13px;font-weight:500;color:var(--text-primary);}
+.eb-hdr-sub{font-size:11px;color:var(--text-tertiary);}
+
+.eb-conv{
+  font-size:11px;color:var(--accent);padding:3px 8px;
+  background:var(--accent-dim);border-radius:4px;display:inline-block;margin-right:5px;
+  font-family:var(--mono);}
+.eb-convs{margin-bottom:8px;}
+
+.fee-lines{margin-bottom:8px;}
+.eb-line{
+  display:flex;justify-content:space-between;align-items:baseline;
+  font-size:12px;padding:4px 0;border-bottom:1px solid var(--border-light);}
+.eb-line:last-child{border-bottom:none;}
+.eb-line-lbl{color:var(--text-secondary);}
+.eb-line-val{font-weight:500;color:var(--text-primary);margin-left:16px;white-space:nowrap;font-family:var(--mono);font-size:11.5px;}
+
+.eb-totals{display:flex;flex-direction:column;gap:3px;padding-top:8px;border-top:1px solid var(--border-light);}
+.eb-utotal{font-size:12px;font-weight:500;color:var(--text-secondary);}
+.eb-qty-line{font-size:12px;color:var(--text-secondary);}
+.eb-etotal{font-size:13px;font-weight:600;color:var(--text-primary);}
+
+.eb-note{
+  font-size:11px;color:var(--warn-text);background:var(--warn-bg);
+  border:1px solid var(--warn-border);border-radius:6px;
+  padding:5px 10px;margin-top:6px;display:inline-block;}
+
+.cat-total-row{
+  background:var(--surface2);border-top:1px solid var(--border);
+  padding:10px 24px;display:flex;justify-content:space-between;align-items:center;}
+.cat-total-lbl{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-secondary);}
+.cat-total-val{font-size:15px;font-weight:600;color:var(--text-primary);font-family:var(--mono);}
+
+.tr-box{background:var(--accent-dim);border:1px solid rgba(0,113,227,.15);border-radius:var(--radius-sm);padding:12px 14px;margin:8px 0;}
+.tr-box-title{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;}
+.tr-total-line{font-size:12px;font-weight:500;color:var(--text-primary);padding:6px 0 4px;border-top:1px solid rgba(0,113,227,.15);margin-top:6px;}
+
+/* ── TOTALS ── */
+.totals-section{background:var(--surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);overflow:hidden;}
+
+.totals-row{display:flex;justify-content:space-between;align-items:center;padding:14px 24px;border-bottom:1px solid var(--border-light);}
+.totals-row:last-child{border-bottom:none;}
+.totals-row.grand{background:var(--text-primary);padding:20px 24px;}
+.totals-lbl{font-size:13px;font-weight:400;color:var(--text-secondary);}
+.totals-lbl.grand{color:rgba(255,255,255,.7);font-size:12px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;}
+.totals-val{font-size:15px;font-weight:500;color:var(--text-primary);font-family:var(--mono);}
+.totals-val.grand{color:white;font-size:26px;font-weight:600;letter-spacing:-.02em;}
+.totals-val.zero{color:var(--text-tertiary);font-weight:400;}
+
+/* ── SURCHARGE / PENALTY ── */
+.sc-row{
+  display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;
+  padding:14px 24px;border-bottom:1px solid var(--border-light);background:var(--surface2);}
+.sc-toggle-grp{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.sc-toggle-grp label{font-size:13px;font-weight:400;color:var(--text-primary);cursor:pointer;}
+.toggle{position:relative;display:inline-block;width:40px;height:22px;}
+.toggle input{opacity:0;width:0;height:0;}
+.slider{position:absolute;cursor:pointer;inset:0;background:#d1d1d6;border-radius:11px;transition:.2s;}
+.slider:before{position:absolute;content:"";height:18px;width:18px;left:2px;bottom:2px;background:white;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+input:checked+.slider{background:var(--green);}
+input:checked+.slider:before{transform:translateX(18px);}
+.sc-fld{display:flex;flex-direction:column;gap:5px;}
+.sc-fld label{font-size:11px;font-weight:500;color:var(--text-secondary);}
+.sc-fld input{
+  padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);
+  font-size:13px;font-family:var(--font);background:var(--surface);color:var(--text-primary);width:156px;
+  transition:border-color .15s,box-shadow .15s;}
+.sc-fld input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
+.sc-fld input:disabled{background:var(--surface2);color:var(--text-tertiary);}
+.sc-tag{font-size:11px;color:var(--text-tertiary);align-self:flex-end;padding-bottom:7px;}
+
+.sc-bd{
+  padding:10px 24px 12px;background:var(--surface);border-bottom:1px solid var(--border-light);
+  font-size:12px;color:var(--text-secondary);display:none;line-height:1.9;}
+.sc-bd .hi{color:var(--accent);font-weight:600;}
+.sc-bd .warn{color:var(--red);font-weight:600;}
+
+/* ── FOOTER NOTE ── */
+.note{
+  background:var(--warn-bg);border:1px solid var(--warn-border);
+  border-radius:var(--radius-sm);padding:12px 16px;
+  font-size:11.5px;color:var(--warn-text);margin-top:4px;line-height:1.7;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-icon">
+      <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8h10M7 12h6"/></svg>
+    </div>
+    <div class="header-text">
+      <h1>Annual Mechanical Fees Calculator</h1>
+      <p>Office of the Building Official &nbsp;&middot;&nbsp; Annual Inspection Division &nbsp;&middot;&nbsp; Mechanical Section</p>
+    </div>
+  </div>
+
+  <!-- PROJECT INFO CARD -->
+  <div class="card">
+    <div class="sec-hdr"><div class="sec-hdr-dot"></div><div class="sec-hdr-title">Project Information</div></div>
+    <div class="entry-body">
+      <div class="entry-grid">
+        <div class="fg">
+          <label>Owner / Firm / Applicant</label>
+          <input type="text" id="proj-owner">
+        </div>
+        <div class="fg">
+          <label>Date</label>
+          <input type="date" id="proj-date">
+        </div>
+        <div class="fg fg-desc">
+          <label>Proposed Project</label>
+          <input type="text" id="proj-name">
+        </div>
+        <div class="fg fg-desc">
+          <label>Location</label>
+          <input type="text" id="proj-location">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ENTRY CARD -->
+  <div class="card">
+    <div class="sec-hdr"><div class="sec-hdr-dot"></div><div class="sec-hdr-title">Equipment Entry</div></div>
+    <div class="entry-body">
+      <div class="entry-grid" id="entry-grid">
+
+        <div class="fg fg-cat">
+          <label>Equipment Category</label>
+          <select id="eq-category" onchange="onCatChange()">
+            <option value="" disabled selected>Select Category</option>
+            <option value="sprinkler">Automatic Fire Sprinkler</option>
+            <option value="boiler">Boilers</option>
+            <option value="cable-car">Cable Car</option>
+            <option value="compressed-air">Compressed Air / Vacuum / Gas Outlet</option>
+            <option value="escalator">Escalators / Moving Walks</option>
+            <option value="freight-elevator">Freight / Construction Elevator</option>
+            <option value="funicular">Funicular</option>
+            <option value="gas-meter">Gas Meter Testing</option>
+            <option value="generator">Generating Set</option>
+            <option value="mechanical-ride">Mechanical Ride</option>
+            <option value="ventilation">Mechanical Ventilation</option>
+            <option value="dumbwaiter">Motor Driven Dumbwaiter</option>
+            <option value="combustion">Other Internal Combustion Engines</option>
+            <option value="other-machinery">Other Machinery / Equipment</option>
+            <option value="refrig-ac">Packaged / Centralized Air Conditioning</option>
+            <option value="passenger-elevator">Passenger / Car Elevator / Wheelchair Lift</option>
+            <option value="conveyor">Pneumatic Tubes / Conveyors / Monorails</option>
+            <option value="piping">Power Piping</option>
+            <option value="pressure-gauge">Pressure Gauge Testing / Calibration</option>
+            <option value="water-heater">Pressurized Water Heater</option>
+            <option value="pressure-vessel">Pressure Vessel</option>
+            <option value="pump">Pumps</option>
+            <option value="refrig-ac">Refrigeration / Ice Plant</option>
+            <option value="weighing-scale">Weighing Scale Structure</option>
+            <option value="window-ac">Window Type Air Conditioner</option>
+          </select>
+        </div>
+
+        <div class="fg fg-desc">
+          <label>Description</label>
+          <input type="text" id="eq-desc">
+        </div>
+
+        <!-- Power (kW/HP/kVA) -->
+        <div class="fg" id="fg-power" style="display:none">
+          <label>Power Rating <span id="power-opt-lbl"></span></label>
+          <div class="input-w-unit">
+            <input type="number" id="eq-power" min="0" step="0.001">
+            <select id="eq-power-unit"><option value="kW">kW</option><option value="HP">HP</option><option value="kVA">kVA</option></select>
+          </div>
+        </div>
+
+        <!-- Capacity TR/kW/HP/kVA -->
+        <div class="fg" id="fg-tr" style="display:none">
+          <label>Capacity (Cooling)</label>
+          <div class="input-w-unit">
+            <input type="number" id="eq-tr" min="0" step="0.001">
+            <select id="eq-tr-unit"><option value="TR">TR</option><option value="kW">kW</option><option value="HP">HP</option><option value="kVA">kVA</option></select>
+          </div>
+        </div>
+
+        <!-- Length -->
+        <div class="fg" id="fg-len" style="display:none">
+          <label>Length / Travel <span id="len-opt-lbl"></span></label>
+          <div class="input-w-unit">
+            <input type="number" id="eq-len" min="0" step="0.001">
+            <select id="eq-len-unit"><option value="m">m</option><option value="ft">ft</option><option value="yd">yd</option></select>
+          </div>
+        </div>
+
+        <!-- Volume -->
+        <div class="fg" id="fg-vol" style="display:none">
+          <label>Volume <span id="vol-opt-lbl"></span></label>
+          <div class="input-w-unit">
+            <input type="number" id="eq-vol" min="0" step="0.001">
+            <select id="eq-vol-unit"><option value="m3">m³</option><option value="L">L</option><option value="gal">gal</option></select>
+          </div>
+        </div>
+
+        <!-- Weight -->
+        <div class="fg" id="fg-wt" style="display:none">
+          <label>Capacity / Weight</label>
+          <div class="input-w-unit">
+            <input type="number" id="eq-wt" min="0" step="0.001">
+            <select id="eq-wt-unit"><option value="ton">ton</option><option value="kg">kg</option><option value="lb">lb</option></select>
+          </div>
+        </div>
+
+        <!-- Landings -->
+        <div class="fg" id="fg-land" style="display:none">
+          <label>No. of Landings</label>
+          <input type="number" id="eq-landings" min="0" step="1">
+        </div>
+
+        <!-- Quantity -->
+        <div class="fg">
+          <label>Quantity</label>
+          <input type="number" id="eq-qty" min="1" step="1" value="1">
+        </div>
+
+      </div><!-- /entry-grid -->
+
+      <!-- Buttons on their own line — no overlap possible -->
+      <div class="btn-row">
+        <button class="btn-add" onclick="addToList()">Add to List</button>
+        <button class="btn-reset" onclick="resetAll()">Reset All</button>
+      </div>
+
+      <!-- Equipment list -->
+      <div class="eq-list-wrap" id="eq-list-wrap" style="display:none">
+        <div class="eq-list-lbl">Equipment List</div>
+        <div id="eq-items"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="sec-hdr"><div class="sec-hdr-dot"></div><div class="sec-hdr-title">Fee Breakdown</div></div>
+    <div class="bd-body" id="bd-body">
+      <div class="bd-empty">No entries yet. Add equipment above.</div>
+    </div>
+  </div>
+
+  <div class="totals-section">
+
+      <div class="totals-row">
+        <div class="totals-lbl">Annual Mechanical Fee</div>
+        <div class="totals-val" id="disp-base">&#8369;0.0</div>
+      </div>
+
+      <!-- Years Late Multiplier -->
+      <div class="sc-row">
+        <div class="sc-toggle-grp">
+          <label class="toggle"><input type="checkbox" id="years-toggle" onchange="onYearsToggle()"><span class="slider"></span></label>
+          <label for="years-toggle">Apply Years Late Multiplier</label>
+        </div>
+        <div class="sc-fld">
+          <label>Previous Date Issued</label>
+          <input type="date" id="years-prev-date" disabled oninput="computeTotals()">
+        </div>
+        <div class="sc-fld">
+          <label>Present Date Issued</label>
+          <input type="date" id="years-curr-date" disabled oninput="computeTotals()">
+        </div>
+        <div class="sc-tag" id="years-tag"></div>
+      </div>
+      <div class="sc-bd" id="years-bd"></div>
+
+      <div class="totals-row">
+        <div class="totals-lbl">Years Late</div>
+        <div class="totals-val zero" id="disp-years">&#8212;</div>
+      </div>
+      
+      <div class="totals-row">
+        <div class="totals-lbl">Fee × Years Late</div>
+        <div class="totals-val zero" id="disp-years-mult">&#8369;0.00</div>
+      </div>
+
+      <!-- Surcharge (100% additional) -->
+      <div class="sc-row">
+        <div class="sc-toggle-grp">
+          <label class="toggle"><input type="checkbox" id="sc-toggle" onchange="onScToggle()"><span class="slider"></span></label>
+          <label for="sc-toggle">Apply Surcharge (100%)</label>
+        </div>
+      </div>
+
+      <div class="totals-row">
+        <div class="totals-lbl">Surcharge</div>
+        <div class="totals-val zero" id="disp-surcharge">&#8369;0.00</div>
+      </div>
+
+      <!-- Penalty controls -->
+      <div class="sc-row">
+        <div class="sc-toggle-grp">
+          <label class="toggle"><input type="checkbox" id="pen-toggle" onchange="onPenToggle()"><span class="slider"></span></label>
+          <label for="pen-toggle">Apply Penalty</label>
+        </div>
+        <div class="sc-fld">
+          <label>Penalty Amount (&#8369;)</label>
+          <input type="number" id="pen-amount" min="0" step="0.01" disabled oninput="computeTotals()">
+        </div>
+      </div>
+
+      <div class="totals-row">
+        <div class="totals-lbl">Penalty</div>
+        <div class="totals-val zero" id="disp-penalty">&#8369;0.00</div>
+      </div>
+
+      <div class="totals-row grand">
+        <div class="totals-lbl grand">TOTAL AMOUNT DUE</div>
+        <div class="totals-val grand" id="disp-total">&#8369;0.00</div>
+      </div>
+
+      <div style="padding:16px 24px;border-top:1px solid var(--border-light);background:var(--surface2);">
+        <button class="btn-export" onclick="exportPDF()">
+          <svg viewBox="0 0 24 24" style="width:16px;height:16px;margin-right:6px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          Export to PDF
+        </button>
+      </div>
+
+    </div>
+
+</div><!-- /shell -->
+
+<script>
+'use strict';
+// ── UNIT CONVERSIONS ─────────────────────────────────────────────────────────
+const UC = {
+  TR:  {TR:1,    kW:3.516,                HP:(1*.9)/.75,          kVA:4.395},
+  kW:  {kW:1,   TR:((1/.746)*.75)/.9,    HP:1/.746,              kVA:1/.8},
+  HP:  {HP:1,   kW:.746,                 TR:(1*.75)/.9,          kVA:.746/.8},
+  kVA: {kVA:1,  kW:.8,                   HP:.8/.746,             TR:(((.8/.746)*.75)/.9)},
+  m3:  {m3:1,   L:1000,    gal:264.172},
+  L:   {L:1,    m3:.001,   gal:.264172},
+  gal: {gal:1,  m3:.00378541, L:3.78541},
+  m:   {m:1,    ft:3.28084,  yd:1.09361},
+  ft:  {ft:1,   m:.3048,     yd:.333333},
+  yd:  {yd:1,   m:.9144,     ft:3},
+  ton: {ton:1,  kg:1000,  lb:2204.62},
+  kg:  {kg:1,   ton:.001, lb:2.20462},
+  lb:  {lb:1,   ton:.000453592, kg:.453592}
+};
+function conv(val,from,to){
+  if(!val||from===to)return val||0;
+  return val*(UC[from]?.[to]??1);
+}
+
+// ── CATEGORY FIELD CONFIG ────────────────────────────────────────────────────
+// 'req' = required, 'opt' = optional (will still compute partial fee)
+const CAT_FIELDS = {
+  'refrig-ac':          {tr:'req'},
+  'window-ac':          {},
+  'ventilation':        {power:'req'},
+  'boiler':             {power:'req'},
+  'generator':          {power:'req'},
+  'combustion':         {power:'req'},
+  'other-machinery':    {power:'req'},
+  'pump':               {power:'req'},
+  'escalator':          {len:'opt'},         // base ₱120 even without length
+  'funicular':          {power:'req', len:'opt'},  // power required, length adds to fee
+  'cable-car':          {power:'req', len:'opt'},
+  'passenger-elevator': {land:'opt'},        // base ₱500 even without landings
+  'freight-elevator':   {land:'opt'},        // base ₱400
+  'dumbwaiter':         {land:'opt'},        // base ₱50
+  'water-heater':       {},
+  'sprinkler':          {},
+  'compressed-air':     {},
+  'piping':             {len:'opt', vol:'opt'},   // either or both
+  'pressure-vessel':    {vol:'req'},
+  'conveyor':           {len:'req'},
+  'weighing-scale':     {wt:'req'},
+  'pressure-gauge':     {},
+  'gas-meter':          {},
+  'mechanical-ride':    {}
+};
+
+const CAT_LABELS = {
+  'refrig-ac':          'Refrigeration / Ice Plant / Packaged/Centralized AC',
+  'window-ac':          'Window Type Air Conditioner',
+  'ventilation':        'Mechanical Ventilation',
+  'boiler':             'Boilers',
+  'generator':          'Generating Set',
+  'combustion':         'Other Internal Combustion Engines',
+  'other-machinery':    'Other Machinery / Equipment',
+  'pump':               'Pumps',
+  'escalator':          'Escalators / Moving Walks',
+  'funicular':          'Funicular',
+  'cable-car':          'Cable Car',
+  'passenger-elevator': 'Passenger / Car Elevator / Wheelchair Lift',
+  'freight-elevator':   'Freight / Construction Elevator',
+  'dumbwaiter':         'Motor Driven Dumbwaiter',
+  'water-heater':       'Pressurized Water Heater',
+  'sprinkler':          'Automatic Fire Sprinkler',
+  'compressed-air':     'Compressed Air / Vacuum / Gas Outlet',
+  'piping':             'Power Piping',
+  'pressure-vessel':    'Pressure Vessel',
+  'conveyor':           'Pneumatic Tubes / Conveyors / Monorails',
+  'weighing-scale':     'Weighing Scale Structure',
+  'pressure-gauge':     'Pressure Gauge Testing / Calibration',
+  'gas-meter':          'Gas Meter Testing',
+  'mechanical-ride':    'Mechanical Ride'
+};
+
+// ── FIELD VISIBILITY ─────────────────────────────────────────────────────────
+function onCatChange(){
+  const cat = document.getElementById('eq-category').value;
+  const f = CAT_FIELDS[cat] || {};
+  const show = id => document.getElementById(id).style.display = '';
+  const hide = id => document.getElementById(id).style.display = 'none';
+  const optLbl = (id, isOpt) => {
+    const el = document.getElementById(id);
+    if(el) el.innerHTML = '';
+  };
+
+  // Power
+  (f.power) ? show('fg-power') : hide('fg-power');
+  optLbl('power-opt-lbl', f.power === 'opt');
+
+  // TR (cooling capacity)
+  (f.tr) ? show('fg-tr') : hide('fg-tr');
+
+  // Length
+  (f.len) ? show('fg-len') : hide('fg-len');
+  optLbl('len-opt-lbl', f.len === 'opt');
+
+  // Volume
+  (f.vol) ? show('fg-vol') : hide('fg-vol');
+  optLbl('vol-opt-lbl', f.vol === 'opt');
+
+  // Weight
+  (f.wt) ? show('fg-wt') : hide('fg-wt');
+
+  // Landings
+  (f.land) ? show('fg-land') : hide('fg-land');
+
+  // Clear numeric inputs on category change
+  ['eq-power','eq-tr','eq-len','eq-vol','eq-wt','eq-landings'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value = '';
+  });
+}
+
+// ── EQUIPMENT LIST STATE ─────────────────────────────────────────────────────
+let equipList = [];
+let entryId = 0;
+
+function addToList(){
+  const cat = document.getElementById('eq-category').value;
+  if(!cat){ alert('Please select an equipment category.'); return; }
+  const f = CAT_FIELDS[cat] || {};
+  const qty = parseInt(document.getElementById('eq-qty').value) || 1;
+  if(qty < 1){ alert('Quantity must be at least 1.'); return; }
+
+  const e = { id:++entryId, cat, qty, desc:document.getElementById('eq-desc').value.trim() };
+
+  // Required power
+  if(f.power === 'req'){
+    e.power = parseFloat(document.getElementById('eq-power').value) || 0;
+    e.powerUnit = document.getElementById('eq-power-unit').value;
+    if(!e.power){ alert('Please enter a power rating.'); return; }
+  }
+
+  // Required cooling capacity
+  if(f.tr === 'req'){
+    e.trCap = parseFloat(document.getElementById('eq-tr').value) || 0;
+    e.trUnit = document.getElementById('eq-tr-unit').value;
+    if(!e.trCap){ alert('Please enter a capacity value.'); return; }
+  }
+
+  // Length (required or optional)
+  if(f.len){
+    e.len = parseFloat(document.getElementById('eq-len').value) || 0;
+    e.lenUnit = document.getElementById('eq-len-unit').value;
+    if(f.len === 'req' && !e.len){ alert('Please enter a length.'); return; }
+  }
+
+  // Volume (required or optional)
+  if(f.vol){
+    e.vol = parseFloat(document.getElementById('eq-vol').value) || 0;
+    e.volUnit = document.getElementById('eq-vol-unit').value;
+    if(f.vol === 'req' && !e.vol){ alert('Please enter a volume.'); return; }
+  }
+
+  // Piping needs at least one of len/vol
+  if(cat === 'piping' && !e.len && !e.vol){
+    alert('Please enter at least a length or volume for Power Piping.'); return;
+  }
+
+  // Weight
+  if(f.wt){
+    e.wt = parseFloat(document.getElementById('eq-wt').value) || 0;
+    e.wtUnit = document.getElementById('eq-wt-unit').value;
+    if(f.wt === 'req' && !e.wt){ alert('Please enter a capacity/weight.'); return; }
+  }
+
+  // Landings (always optional)
+  if(f.land){
+    e.landings = parseInt(document.getElementById('eq-landings').value) || 0;
+  }
+
+  equipList.push(e);
+  renderEqList();
+  renderBreakdown();
+  clearForm();
+}
+
+function clearForm(){
+  document.getElementById('eq-desc').value = '';
+  document.getElementById('eq-qty').value = '1';
+  ['eq-power','eq-tr','eq-len','eq-vol','eq-wt','eq-landings'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value = '';
+  });
+}
+
+function deleteEntry(id){
+  equipList = equipList.filter(e => e.id !== id);
+  renderEqList();
+  renderBreakdown();
+}
+
+function renderEqList(){
+  const wrap = document.getElementById('eq-list-wrap');
+  const items = document.getElementById('eq-items');
+  if(!equipList.length){ wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  items.innerHTML = equipList.map(e => {
+    let d = `Qty: ${e.qty}`;
+    if(e.power)    d += ` · ${e.power} ${e.powerUnit}`;
+    if(e.trCap)    d += ` · ${e.trCap} ${e.trUnit}`;
+    if(e.len)      d += ` · ${e.len} ${e.lenUnit}`;
+    if(e.vol)      d += ` · ${e.vol} ${e.volUnit}`;
+    if(e.wt)       d += ` · ${e.wt} ${e.wtUnit}`;
+    if(e.landings) d += ` · ${e.landings} landings`;
+    return `<div class="eq-item">
+      <div class="eq-item-info">
+        <div class="eq-cat">${CAT_LABELS[e.cat]}</div>
+        <div class="eq-detail">${e.desc ? e.desc+' · ' : ''}${d}</div>
+      </div>
+      <button class="btn-del" onclick="deleteEntry(${e.id})" title="Remove">&#x2715;</button>
+    </div>`;
+  }).join('');
+}
+
+// ── FEE ENGINE ───────────────────────────────────────────────────────────────
+// php1 = 1 decimal place (base fee totals)
+// php2 = 2 decimal places (surcharge, penalty, grand total, individual line amounts)
+function php1(v){ return '&#8369;' + v.toLocaleString('en-PH',{minimumFractionDigits:1,maximumFractionDigits:1}); }
+function php2(v){ return '&#8369;' + v.toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fLine(lbl,val){ return `<div class="eb-line"><span class="eb-line-lbl">${lbl}</span><span class="eb-line-val">${val}</span></div>`; }
+
+// ── Individual fee calculators ── return {lines[], perUnit, partial}
+// partial=true means some component was skipped (optional field not provided)
+
+function feeVentilation(kw){
+  const l=[];
+  if(!kw) return {lines:l, perUnit:0};
+  
+  let total = 0;
+  
+  // Bracket 1: 0 < kW ≤ 1 (₱10/kW)
+  if(kw > 0){
+    const chunk = Math.min(kw, 1);
+    const fee = chunk * 10;
+    total += fee;
+    l.push(fLine(`${chunk.toFixed(3)} kW (0–1 kW) × ₱10/kW`, php2(fee)));
+  }
+  
+  // Bracket 2: 1 < kW ≤ 7.5 (₱50/kW)
+  if(kw > 1){
+    const chunk = Math.min(kw - 1, 6.5);
+    const fee = chunk * 50;
+    total += fee;
+    l.push(fLine(`${chunk.toFixed(3)} kW (1–7.5 kW) × ₱50/kW`, php2(fee)));
+  }
+  
+  // Bracket 3: kW > 7.5 (₱20/kW, ceiling on excess)
+  if(kw > 7.5){
+    const excess = kw - 7.5;
+    const cEx = Math.ceil(excess);
+    const fee = cEx * 20;
+    total += fee;
+    l.push(fLine(`roundup(${excess.toFixed(3)}) = ${cEx} kW (>7.5 kW) × ₱20/kW`,php2(fee)));
+  }
+  
+  return {lines:l, perUnit:total};
+}
+
+function feePump(kw){
+  const l=[];
+  if(!kw) return {lines:l, perUnit:0};
+  
+  let total = 0;
+  
+  // Bracket 1: 0 < kW ≤ 5 (₱55/kW)
+  if(kw > 0){
+    const chunk = Math.min(kw, 5);
+    const fee = chunk * 55;
+    total += fee;
+    l.push(fLine(`${chunk.toFixed(3)} kW (0–5 kW) × ₱55/kW`, php2(fee)));
+  }
+  
+  // Bracket 2: 5 < kW ≤ 10 (₱90/kW)
+  if(kw > 5){
+    const chunk = Math.min(kw - 5, 5);
+    const fee = chunk * 90;
+    total += fee;
+    l.push(fLine(`${chunk.toFixed(3)} kW (5–10 kW) × ₱90/kW`, php2(fee)));
+  }
+  
+  // Bracket 3: kW > 10 (₱2/kW, ceiling on excess)
+  if(kw > 10){
+    const excess = kw - 10;
+    const cEx = Math.ceil(excess);
+    const fee = cEx * 2;
+    total += fee;
+    l.push(fLine(`roundup(${excess.toFixed(3)}) = ${cEx} kW (>10 kW) × ₱2/kW`, php2(fee)));
+  }
+  
+  return {lines:l, perUnit:total};
+}
+
+function feeBoiler(kw){
+  const l=[];
+  if(!kw) return {lines:l, perUnit:0};
+  
+  let total = 0;
+  
+  // Bracket 1: 0 < kW ≤ 7.5 (₱400/kW)
+  if(kw > 0){
+    const chunk = Math.min(kw, 7.5);
+    const fee = chunk * 400;
+    total += fee;
+    l.push(fLine(`${chunk.toFixed(3)} kW (0–7.5 kW) × ₱400/kW`, php2(fee)));
+  }
+  
+  // Bracket 2: 7.5 < kW ≤ 22 (₱550/kW)
+  if(kw > 7.5){
+    const chunk = Math.min(kw - 7.5, 14.5);
+    const fee = chunk * 550;
+    total += fee;
+    l.push(fLine(`${chunk.toFixed(3)} kW (7.5–22 kW) × ₱550/kW`, php2(fee)));
+  }
+  
+  // Bracket 3: 22 < kW ≤ 37 (₱600/kW)
+  if(kw > 22){
+    const chunk = Math.min(kw - 22, 15);
+    const fee = chunk * 600;
+    total += fee;
+    l.push(fLine(`${chunk.toFixed(3)} kW (22–37 kW) × ₱600/kW`, php2(fee)));
+  }
+  
+  // Bracket 4: 37 < kW ≤ 52 (₱650/kW)
+  if(kw > 37){
+    const chunk = Math.min(kw - 37, 15);
+    const fee = chunk * 650;
+    total += fee;
+    l.push(fLine(`${chunk.toFixed(3)} kW (37–52 kW) × ₱650/kW`, php2(fee)));
+  }
+  
+  // Bracket 5: 52 < kW ≤ 67 (₱800/kW)
+  if(kw > 52){
+    const chunk = Math.min(kw - 52, 15);
+    const fee = chunk * 800;
+    total += fee;
+    l.push(fLine(`${chunk.toFixed(3)} kW (52–67 kW) × ₱800/kW`, php2(fee)));
+  }
+  
+  // Bracket 6: 67 < kW ≤ 74 (₱900/kW)
+  if(kw > 67){
+    const chunk = Math.min(kw - 67, 7);
+    const fee = chunk * 900;
+    total += fee;
+    l.push(fLine(`${chunk.toFixed(3)} kW (67–74 kW) × ₱900/kW`, php2(fee)));
+  }
+  
+  // Bracket 7: kW > 74 (₱4/kW, ceiling on excess)
+  if(kw > 74){
+    const excess = kw - 74;
+    const cEx = Math.ceil(excess);
+    const fee = cEx * 4;
+    total += fee;
+    l.push(fLine(`roundup(${excess.toFixed(3)}) = ${cEx} kW (>74 kW) × ₱4/kW`, php2(fee)));
+  }
+  
+  return {lines:l, perUnit:total};
+}
+
+function feeGenerator(kw){
+  const l=[];
+  if(!kw) return {lines:l, perUnit:0};
+  let pu=0;
+  if(kw<=50){
+    const c=Math.ceil(kw); pu=c*15;
+    l.push(fLine(`roundup(${kw.toFixed(3)}) = ${c} kW × ₱15`,php2(pu)));
+  } else if(kw<=100){
+    const ex=kw-50,cEx=Math.ceil(ex),add=cEx*10; pu=750+add;
+    l.push(fLine('First 50 kW × ₱15',php2(750)));
+    l.push(fLine(`Excess: roundup(${ex.toFixed(3)}) = ${cEx} kW × ₱10`,php2(add)));
+  } else {
+    const ex=kw-100,cEx=Math.ceil(ex),add=parseFloat((cEx*2.4).toFixed(2)); pu=1250+add;
+    l.push(fLine('First 50 kW × ₱15',php2(750)));
+    l.push(fLine('Next 50 kW × ₱10',php2(500)));
+    l.push(fLine(`Excess: roundup(${ex.toFixed(3)}) = ${cEx} kW × ₱2.40`,php2(add)));
+  }
+  return {lines:l, perUnit:pu};
+}
+
+function feeCombustion(kw){
+  const l=[];
+  if(!kw) return {lines:l, perUnit:0};
+  
+  let total = 0;
+  
+  // Bracket 1: 0 < kW ≤ 10 (₱10/kW)
+  if(kw > 0){
+    const chunk = Math.min(kw, 10);
+    const fee = chunk * 10;
+    total += fee;
+    l.push(fLine(`${chunk.toFixed(3)} kW (0–10 kW) × ₱10/kW`, php2(fee)));
+  }
+  
+  // Bracket 2: kW > 10 (₱3/kW, ceiling on excess)
+  if(kw > 10){
+    const excess = kw - 10;
+    const cEx = Math.ceil(excess);
+    const fee = cEx * 3;
+    total += fee;
+    l.push(fLine(`roundup(${excess.toFixed(3)}) = ${cEx} kW (>10 kW) × ₱3/kW`, php2(fee)));
+  }
+  
+  return {lines:l, perUnit:total};
+}
+
+function feeOtherMachinery(kw){
+  const l=[];
+  if(!kw) return {lines:l, perUnit:0};
+  
+  let total = 0;
+  
+  // Bracket 1: 0 < kW ≤ 0.5 (₱8/kW)
+  if(kw > 0){
+    const chunk = Math.min(kw, 0.5);
+    const fee = chunk * 8;
+    total += fee;
+    l.push(fLine(`${chunk.toFixed(3)} kW (0–0.5 kW) × ₱8/kW`, php2(fee)));
+  }
+  
+  // Bracket 2: 0.5 < kW ≤ 1 (₱23/kW)
+  if(kw > 0.5){
+    const chunk = Math.min(kw - 0.5, 0.5);
+    const fee = chunk * 23;
+    total += fee;
+    l.push(fLine(`${chunk.toFixed(3)} kW (0.5–1 kW) × ₱23/kW`, php2(fee)));
+  }
+  
+  // Bracket 3: 1 < kW ≤ 3 (₱39/kW)
+  if(kw > 1){
+    const chunk = Math.min(kw - 1, 2);
+    const fee = chunk * 39;
+    total += fee;
+    l.push(fLine(`${chunk.toFixed(3)} kW (1–3 kW) × ₱39/kW`, php2(fee)));
+  }
+  
+  // Bracket 4: 3 < kW ≤ 5 (₱55/kW)
+  if(kw > 3){
+    const chunk = Math.min(kw - 3, 2);
+    const fee = chunk * 55;
+    total += fee;
+    l.push(fLine(`${chunk.toFixed(3)} kW (3–5 kW) × ₱55/kW`, php2(fee)));
+  }
+  
+  // Bracket 5: 5 < kW ≤ 10 (₱80/kW)
+  if(kw > 5){
+    const chunk = Math.min(kw - 5, 5);
+    const fee = chunk * 80;
+    total += fee;
+    l.push(fLine(`${chunk.toFixed(3)} kW (5–10 kW) × ₱80/kW`, php2(fee)));
+  }
+  
+  // Bracket 6: kW > 10 (₱4/kW, ceiling on excess)
+  if(kw > 10){
+    const excess = kw - 10;
+    const cEx = Math.ceil(excess);
+    const fee = cEx * 4;
+    total += fee;
+    l.push(fLine(`roundup(${excess.toFixed(3)}) = ${cEx} kW (>10 kW) × ₱4/kW`, php2(fee)));
+  }
+  
+  return {lines:l, perUnit:total};
+}
+
+// Elevator: base fee always, landing fee only if landings provided
+function feeElevator(baseFee, landings){
+  const l=[];
+  let partial = false;
+  l.push(fLine('Base fee (per unit)',php2(baseFee)));
+  let landFee = 0;
+  if(landings > 0){
+    const ex = Math.max(0, landings - 5);
+    landFee = ex * 50;
+    l.push(fLine(`${landings} landings — 5 free = ${ex} excess × ₱50`,php2(landFee)));
+  } else {
+    l.push(fLine('Landings not provided — base fee only',''));
+    partial = true;
+  }
+  return {lines:l, perUnit:baseFee+landFee, partial};
+}
+
+// Escalator: base ₱120 always + length fee if provided
+function feeEscalator(m){
+  const l=[];
+  let partial = false;
+  l.push(fLine('Base fee (per unit)',php2(120)));
+  let lenFee = 0;
+  if(m > 0){
+    const cM=Math.ceil(m); lenFee=cM*10;
+    l.push(fLine(`roundup(${m.toFixed(3)}) = ${cM} m × ₱10`,php2(lenFee)));
+  } else {
+    l.push(fLine('Length not provided — base fee only',''));
+    partial = true;
+  }
+  return {lines:l, perUnit:120+lenFee, partial};
+}
+
+// Funicular: power required, length optional
+function feeFunicular(kw, m){
+  const l=[];
+  let partial = false;
+  const cK=Math.ceil(kw), kFee=cK*50;
+  l.push(fLine(`roundup(${kw.toFixed(3)}) = ${cK} kW × ₱50`,php2(kFee)));
+  let lenFee = 0;
+  if(m > 0){
+    const cM=Math.ceil(m); lenFee=cM*10;
+    l.push(fLine(`roundup(${m.toFixed(3)}) = ${cM} m × ₱10`,php2(lenFee)));
+  } else {
+    l.push(fLine('Length not provided — power fee only',''));
+    partial = true;
+  }
+  return {lines:l, perUnit:kFee+lenFee, partial};
+}
+
+// Cable Car: power required, length optional
+function feeCableCar(kw, m){
+  const l=[];
+  let partial = false;
+  const cK=Math.ceil(kw), kFee=cK*25;
+  l.push(fLine(`roundup(${kw.toFixed(3)}) = ${cK} kW × ₱25`,php2(kFee)));
+  let lenFee = 0;
+  if(m > 0){
+    const cM=Math.ceil(m); lenFee=cM*2;
+    l.push(fLine(`roundup(${m.toFixed(3)}) = ${cM} m × ₱2`,php2(lenFee)));
+  } else {
+    l.push(fLine('Length not provided — power fee only',''));
+    partial = true;
+  }
+  return {lines:l, perUnit:kFee+lenFee, partial};
+}
+
+function feePressureVessel(m3){
+  const cM=Math.ceil(m3),l=[];
+  l.push(fLine(`roundup(${m3.toFixed(3)}) = ${cM} m³ × ₱40`,php2(cM*40)));
+  return {lines:l, perUnit:cM*40};
+}
+
+function feeWeighingScale(ton){
+  const cT=Math.ceil(ton),l=[];
+  l.push(fLine(`roundup(${ton.toFixed(3)}) = ${cT} ton × ₱30`,php2(cT*30)));
+  return {lines:l, perUnit:cT*30};
+}
+
+function feePiping(m, m3){
+  const cM=Math.ceil(m), cV=Math.ceil(m3), mf=cM*2, vf=cV*2, l=[];
+  if(m  > 0) l.push(fLine(`Length:  roundup(${m.toFixed(3)}) = ${cM} m × ₱2`,  php2(mf)));
+  if(m3 > 0) l.push(fLine(`Volume:  roundup(${m3.toFixed(3)}) = ${cV} m³ × ₱2`, php2(vf)));
+  const higher = Math.max(mf, vf);
+  const which = mf >= vf ? 'Length' : 'Volume';
+  l.push(fLine(`Apply higher value &rarr; ${which}`, php2(higher)));
+  return {lines:l, perUnit:higher};
+}
+
+function feeConveyor(m){
+  const cM=Math.ceil(m), fee=parseFloat((cM*2.4).toFixed(2)), l=[];
+  l.push(fLine(`roundup(${m.toFixed(3)}) = ${cM} m × ₱2.40`,php2(fee)));
+  return {lines:l, perUnit:fee};
+}
+
+// TR tiers
+const TR_TIERS=[
+  {min:0,   max:100,      rate:25},
+  {min:100, max:150,      rate:20},
+  {min:150, max:300,      rate:15},
+  {min:300, max:500,      rate:10},
+  {min:500, max:Infinity, rate:5}
+];
+function applyTrTiers(totalTR){
+  let rem=totalTR, tot=0; const l=[];
+  for(const t of TR_TIERS){
+    if(rem<=0) break;
+    if(t.max===Infinity){
+      const cR=Math.ceil(rem);
+      l.push(fLine(`roundup(${rem.toFixed(2)}) = ${cR} TR × ₱${t.rate}/TR`, php2(cR*t.rate)));
+      tot+=cR*t.rate; rem=0;
+    } else {
+      const ch=Math.min(rem,t.max-t.min); if(ch<=0) continue;
+      l.push(fLine(`${ch.toFixed(2)} TR (${t.min}–${t.max} TR) × ₱${t.rate}/TR`, php2(ch*t.rate)));
+      tot+=ch*t.rate; rem-=ch;
+    }
+  }
+  return {lines:l, total:tot};
+}
+
+// Flat rate categories
+const FLAT_RATES = {
+  'window-ac':       {rate:40,  unit:'unit',   label:'Window AC unit'},
+  'water-heater':    {rate:120, unit:'unit',   label:'Water heater unit'},
+  'sprinkler':       {rate:2,   unit:'head',   label:'Sprinkler head'},
+  'compressed-air':  {rate:10,  unit:'outlet', label:'Outlet'},
+  'pressure-gauge':  {rate:24,  unit:'unit',   label:'Pressure gauge'},
+  'gas-meter':       {rate:30,  unit:'unit',   label:'Gas meter'},
+  'mechanical-ride': {rate:30,  unit:'unit',   label:'Mechanical ride unit'}
+};
+
+const CAT_ORDER = [
+  'refrig-ac','window-ac','ventilation','pump','escalator','funicular','cable-car',
+  'passenger-elevator','freight-elevator','dumbwaiter','boiler','water-heater','sprinkler',
+  'generator','compressed-air','piping','combustion','other-machinery','pressure-vessel',
+  'conveyor','weighing-scale','pressure-gauge','gas-meter','mechanical-ride'
+];
+
+let currentBaseFee = 0;
+
+// ── RENDER BREAKDOWN ─────────────────────────────────────────────────────────
+function renderBreakdown(){
+  const bdBody = document.getElementById('bd-body');
+  if(!equipList.length){
+    bdBody.innerHTML = '<div class="bd-empty">No entries yet. Add equipment above.</div>';
+    currentBaseFee = 0; computeTotals(); return;
+  }
+
+  const grouped = {};
+  for(const e of equipList){ if(!grouped[e.cat]) grouped[e.cat]=[]; grouped[e.cat].push(e); }
+  const cats = CAT_ORDER.filter(c=>grouped[c]).concat(Object.keys(grouped).filter(c=>!CAT_ORDER.includes(c)));
+
+  let html = '', grandTotal = 0;
+
+  for(const cat of cats){
+    const entries = grouped[cat];
+    const label = CAT_LABELS[cat];
+    let catTotal = 0, bodyHtml = '';
+
+    // ── TR AGGREGATE ──────────────────────────────────────────────────────────
+    if(cat === 'refrig-ac'){
+      const trList = entries.map(e => {
+        const rawTR = conv(e.trCap, e.trUnit, 'TR');
+        return { e, rawTR, totalTR: rawTR * e.qty };
+      });
+      const grandTR = trList.reduce((s,x) => s+x.totalTR, 0);
+
+      // Entry list
+      let listHtml = '';
+      for(const {e,rawTR,totalTR} of trList){
+        const nm = e.desc || 'Unit';
+        let convNote = '';
+        if(e.trUnit !== 'TR')
+          convNote = `<div class="eb-convs"><span class="eb-conv">${e.trCap} ${e.trUnit} &rarr; ${rawTR.toFixed(2)} TR/unit</span></div>`;
+        const specStr = `${e.trCap} ${e.trUnit}, ${e.qty} unit${e.qty>1?'s':''}`;
+        listHtml += `<div class="eb-wrap"><div class="eb">
+          <div class="eb-hdr">
+            <div class="eb-hdr-title">${nm}</div>
+            <div class="eb-hdr-sub">${specStr}</div>
+          </div>
+          ${convNote}
+          <div class="fee-lines">
+            ${fLine(`${e.qty} unit${e.qty>1?'s':''} &times; ${rawTR.toFixed(2)} TR/unit`, `${totalTR.toFixed(2)} TR`)}
+          </div>
+        </div></div>`;
+      }
+
+      // TR total + tier breakdown
+      const {lines:tl, total:trFee} = applyTrTiers(grandTR);
+      catTotal = trFee;
+
+      const trBox = `<div class="tr-box">
+        <div class="tr-box-title">Tiered Fee on Grand Total TR</div>
+        <div class="tr-total-line">TOTAL TR = ${grandTR.toFixed(2)} TR</div>
+        <div class="fee-lines">${tl.join('')}</div>
+      </div>`;
+      bodyHtml = `${listHtml}<div class="eb"><div style="padding:0 0 10px;">${trBox}</div></div>`;
+
+    } else {
+      // ── STANDARD CATEGORIES ───────────────────────────────────────────────
+      for(const e of entries){
+        const nm = e.desc || 'Unit';
+        let convs = [], kw=0, m=0, m3=0, ton=0, calcResult, partial=false;
+
+        if(e.power){
+          kw = conv(e.power, e.powerUnit, 'kW');
+          if(e.powerUnit !== 'kW') convs.push(`${e.power} ${e.powerUnit} &rarr; ${kw.toFixed(3)} kW`);
+        }
+        if(e.len){
+          m = conv(e.len, e.lenUnit, 'm');
+          if(e.lenUnit !== 'm') convs.push(`${e.len} ${e.lenUnit} &rarr; ${m.toFixed(3)} m`);
+        }
+        if(e.vol){
+          m3 = conv(e.vol, e.volUnit, 'm3');
+          if(e.volUnit !== 'm3') convs.push(`${e.vol} ${e.volUnit} &rarr; ${m3.toFixed(3)} m&sup3;`);
+        }
+        if(e.wt){
+          ton = conv(e.wt, e.wtUnit, 'ton');
+          if(e.wtUnit !== 'ton') convs.push(`${e.wt} ${e.wtUnit} &rarr; ${ton.toFixed(3)} ton`);
+        }
+
+        const isFlat = cat in FLAT_RATES;
+        if(isFlat){
+          const r = FLAT_RATES[cat];
+          calcResult = { lines:[fLine(`₱${r.rate} per ${r.unit} (flat rate)`, php2(r.rate))], perUnit:r.rate };
+        } else {
+          switch(cat){
+            case 'ventilation':        calcResult=feeVentilation(kw); break;
+            case 'pump':               calcResult=feePump(kw); break;
+            case 'boiler':             calcResult=feeBoiler(kw); break;
+            case 'generator':          calcResult=feeGenerator(kw); break;
+            case 'combustion':         calcResult=feeCombustion(kw); break;
+            case 'other-machinery':    calcResult=feeOtherMachinery(kw); break;
+            case 'escalator':          calcResult=feeEscalator(m); break;
+            case 'funicular':          calcResult=feeFunicular(kw,m); break;
+            case 'cable-car':          calcResult=feeCableCar(kw,m); break;
+            case 'passenger-elevator': calcResult=feeElevator(500, e.landings||0); break;
+            case 'freight-elevator':   calcResult=feeElevator(400, e.landings||0); break;
+            case 'dumbwaiter':         calcResult=feeElevator(50,  e.landings||0); break;
+            case 'piping':             calcResult=feePiping(m,m3); break;
+            case 'pressure-vessel':    calcResult=feePressureVessel(m3); break;
+            case 'conveyor':           calcResult=feeConveyor(m); break;
+            case 'weighing-scale':     calcResult=feeWeighingScale(ton); break;
+            default:                   calcResult={lines:[],perUnit:0};
+          }
+        }
+
+        const entryTotal = calcResult.perUnit * e.qty;
+        catTotal += entryTotal;
+        partial = calcResult.partial || false;
+
+        // Build specs string
+        let specs = [];
+        if(e.power)    specs.push(`${e.power} ${e.powerUnit}`);
+        if(e.len)      specs.push(`${e.len} ${e.lenUnit}`);
+        if(e.vol)      specs.push(`${e.vol} ${e.volUnit}`);
+        if(e.wt)       specs.push(`${e.wt} ${e.wtUnit}`);
+        if(e.landings) specs.push(`${e.landings} landings`);
+
+        const specStr = (specs.length ? specs.join(', ') + ', ' : '') + `${e.qty} unit${e.qty>1?'s':''}`;
+        const convHtml = convs.length
+          ? `<div class="eb-convs">${convs.map(c=>`<span class="eb-conv">${c}</span>`).join(' ')}</div>`
+          : '';
+
+        // Build entry block
+        let eb = `<div class="eb-wrap"><div class="eb">
+          <div class="eb-hdr">
+            <div class="eb-hdr-title">${nm}</div>
+            <div class="eb-hdr-sub">${specStr}</div>
+          </div>
+          ${convHtml}
+          <div class="fee-lines">${calcResult.lines.join('')}</div>
+          <div class="eb-totals">
+            <div class="eb-utotal">Per Unit Total: ${php2(calcResult.perUnit)}</div>`;
+        if(e.qty > 1)
+          eb += `<div class="eb-qty">${php2(calcResult.perUnit)} &times; ${e.qty} units = ${php2(entryTotal)}</div>`;
+        eb += `<div class="eb-etotal">Entry Total: ${php2(entryTotal)}</div>`;
+        if(partial)
+          eb += `<div class="eb-note">Note: Partial fee computed — one or more optional fields were not provided.</div>`;
+        eb += `</div></div></div>`;
+        bodyHtml += eb;
+      }
+    }
+
+    grandTotal += catTotal;
+    html += `<div class="cat-block">
+      <div class="cat-hdr">${label}</div>
+      <div class="cat-body">${bodyHtml}</div>
+      <div class="cat-total-row">
+        <div class="cat-total-lbl">Total &mdash; ${label}</div>
+        <div class="cat-total-val">${php2(catTotal)}</div>
+      </div>
+    </div>`;
+  }
+
+  bdBody.innerHTML = html;
+  currentBaseFee = grandTotal;
+  computeTotals();
+}
+
+// ── SURCHARGE / PENALTY / TOTALS ─────────────────────────────────────────────
+function onYearsToggle(){
+  const on = document.getElementById('years-toggle').checked;
+  document.getElementById('years-prev-date').disabled = !on;
+  document.getElementById('years-curr-date').disabled = !on;
+  if(!on){ 
+    document.getElementById('years-bd').style.display='none'; 
+    document.getElementById('years-tag').textContent=''; 
+  }
+  computeTotals();
+}
+function onScToggle(){
+  computeTotals();
+}
+function onPenToggle(){
+  const on = document.getElementById('pen-toggle').checked;
+  document.getElementById('pen-amount').disabled = !on;
+  if(!on) document.getElementById('pen-amount').value = '';
+  computeTotals();
+}
+
+function computeTotals(){
+  const F = currentBaseFee;
+  let runningTotal = F;
+  let yearsLate = 0;
+  let feeAfterYears = 0;
+  let surcharge = 0;
+
+  // ── YEARS LATE MULTIPLIER ──
+  const yearsOn = document.getElementById('years-toggle').checked;
+  const yearsBd = document.getElementById('years-bd');
+  const yearsTag = document.getElementById('years-tag');
+
+  if(yearsOn){
+    const prevStr = document.getElementById('years-prev-date').value;
+    const currStr = document.getElementById('years-curr-date').value;
+    if(prevStr && currStr){
+      const prev   = new Date(prevStr + 'T12:00:00');
+      const curr   = new Date(currStr + 'T12:00:00');
+      const expiry = new Date(prev);
+      expiry.setFullYear(expiry.getFullYear() + 1);
+
+      if(curr <= expiry){
+        yearsLate = 0;
+      } else {
+        // Anniversary ceiling: walk forward year by year from expiry
+        let y = 0;
+        const chk = new Date(expiry);
+        while(curr > chk){
+          y++;
+          chk.setFullYear(chk.getFullYear() + 1);
+        }
+        yearsLate = Math.max(1, y);
+      }
+
+      if(yearsLate >= 1){
+        feeAfterYears = F * yearsLate;
+        runningTotal = feeAfterYears;
+      }
+
+      const fmt = d => d.toLocaleDateString('en-PH',{year:'numeric',month:'long',day:'numeric'});
+      const statusSpan = yearsLate > 0
+        ? `<span class="warn">${yearsLate} year${yearsLate>1?'s':''} late</span>`
+        : `<span class="hi">On time</span>`;
+
+      yearsTag.innerHTML = yearsLate>0 ? `${yearsLate} yr${yearsLate>1?'s':''} late` : 'On time';
+      yearsBd.style.display = 'block';
+
+      if(yearsLate >= 1){
+        yearsBd.innerHTML =
+          `Expiry Date: <span class="hi">${fmt(expiry)}</span> &nbsp;|&nbsp; Status: ${statusSpan}<br>`+
+          `Fee × Years = ${php1(F)} &times; ${yearsLate} = <span class="hi">${php2(feeAfterYears)}</span>`;
+      } else {
+        yearsBd.innerHTML = `Expiry Date: <span class="hi">${fmt(expiry)}</span> &nbsp;|&nbsp; ${statusSpan}`;
+      }
+    } else {
+      yearsBd.style.display='none'; yearsTag.textContent='';
+    }
+  } else {
+    yearsBd.style.display='none'; yearsTag.textContent='';
+  }
+
+  // ── SURCHARGE (100% ADDITIONAL) ──
+  // Only applies if toggle is ON AND payment is actually late
+  const scOn = document.getElementById('sc-toggle').checked;
+  let isLate = false;
+  
+  // Check if payment is late
+  if(yearsOn){
+    const prevStr = document.getElementById('years-prev-date').value;
+    const currStr = document.getElementById('years-curr-date').value;
+    if(prevStr && currStr){
+      const prev = new Date(prevStr + 'T12:00:00');
+      const curr = new Date(currStr + 'T12:00:00');
+      const expiry = new Date(prev);
+      expiry.setFullYear(expiry.getFullYear() + 1);
+      isLate = curr > expiry;
+    }
+  }
+  
+  // Apply surcharge only if toggle is ON and payment is late
+  if(scOn && isLate){
+    surcharge = runningTotal; // 100% of whatever the current total is
+    runningTotal += surcharge;
+  }
+
+  // ── PENALTY ──
+  let penalty = 0;
+  if(document.getElementById('pen-toggle').checked)
+    penalty = parseFloat(document.getElementById('pen-amount').value) || 0;
+
+  const total = runningTotal + penalty;
+
+  // ── UPDATE DISPLAY ──
+  document.getElementById('disp-base').innerHTML = php1(F);
+  
+  const ylEl = document.getElementById('disp-years');
+  ylEl.textContent = yearsLate > 0 ? `${yearsLate} year${yearsLate>1?'s':''}` : '—';
+  ylEl.className = 'totals-val ' + (yearsLate>0 ? '' : 'zero');
+  ylEl.style.color = yearsLate>0 ? '#9b2335' : '';
+  
+  const ymEl = document.getElementById('disp-years-mult');
+  ymEl.innerHTML = php2(feeAfterYears);
+  ymEl.className = 'totals-val' + (feeAfterYears>0 ? '' : ' zero');
+  
+  const scEl = document.getElementById('disp-surcharge');
+  scEl.innerHTML = php2(surcharge);
+  scEl.className = 'totals-val' + (surcharge>0 ? '' : ' zero');
+  
+  const pEl = document.getElementById('disp-penalty');
+  pEl.innerHTML = php2(penalty);
+  pEl.className = 'totals-val' + (penalty>0 ? '' : ' zero');
+  
+  // Round total to 1 decimal place
+  const totalRounded = Math.round(total * 10) / 10;
+  document.getElementById('disp-total').innerHTML = php1(totalRounded);
+}
+
+// ── RESET ────────────────────────────────────────────────────────────────────
+function resetAll(){
+  equipList=[]; entryId=0;
+  document.getElementById('eq-items').innerHTML='';
+  document.getElementById('eq-list-wrap').style.display='none';
+  document.getElementById('eq-category').value='';
+  document.getElementById('eq-desc').value='';
+  document.getElementById('eq-qty').value='1';
+  ['fg-power','fg-tr','fg-len','fg-vol','fg-wt','fg-land'].forEach(id=>document.getElementById(id).style.display='none');
+  ['eq-power','eq-tr','eq-len','eq-vol','eq-wt','eq-landings'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('bd-body').innerHTML='<div class="bd-empty">No entries yet. Add equipment above.</div>';
+  document.getElementById('years-toggle').checked=false;
+  document.getElementById('sc-toggle').checked=false;
+  document.getElementById('pen-toggle').checked=false;
+  document.getElementById('years-prev-date').disabled=true; document.getElementById('years-prev-date').value='';
+  document.getElementById('years-curr-date').disabled=true; document.getElementById('years-curr-date').value='';
+  document.getElementById('pen-amount').disabled=true;   document.getElementById('pen-amount').value='';
+  document.getElementById('years-bd').style.display='none';
+  document.getElementById('years-tag').textContent='';
+  currentBaseFee=0;
+  computeTotals();
+}
+
+// ── EXPORT PDF ───────────────────────────────────────────────────────────────
+function exportPDF(){
+  if(!equipList.length){
+    alert('Please add at least one equipment entry before exporting.');
+    return;
+  }
+  
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  
+  let y = 20;
+  const leftMargin = 20;
+  const pageWidth = doc.internal.pageSize.width;
+  const pageHeight = doc.internal.pageSize.height;
+  
+  const checkPageBreak = (neededSpace) => {
+    if(y + neededSpace > pageHeight - 20){
+      doc.addPage();
+      y = 20;
+      return true;
+    }
+    return false;
+  };
+  
+  // Title
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Annual Mechanical Fees Calculator', pageWidth/2, y, {align: 'center'});
+  y += 6;
+  
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100);
+  doc.text('Office of the Building Official • Annual Inspection Division • Mechanical Section', pageWidth/2, y, {align: 'center'});
+  doc.setTextColor(0);
+  y += 12;
+  
+  // Project Information
+  checkPageBreak(50);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setFillColor(245, 245, 247);
+  doc.rect(leftMargin, y-4, pageWidth-40, 8, 'F');
+  doc.text('Project Information', leftMargin+2, y+2);
+  y += 10;
+  
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  
+  const projOwner = document.getElementById('proj-owner').value || 'N/A';
+  const projDate = document.getElementById('proj-date').value || new Date().toISOString().split('T')[0];
+  const projName = document.getElementById('proj-name').value || 'N/A';
+  const projLoc = document.getElementById('proj-location').value || 'N/A';
+  const prevDate = document.getElementById('years-prev-date').value || 'N/A';
+  const currDate = document.getElementById('years-curr-date').value || 'N/A';
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Owner / Firm / Applicant:', leftMargin, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(projOwner, leftMargin + 50, y);
+  y += 6;
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Date:', leftMargin, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(projDate, leftMargin + 50, y);
+  y += 6;
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Previous Issue Date:', leftMargin, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(prevDate, leftMargin + 50, y);
+  y += 6;
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Present Issue Date:', leftMargin, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(currDate, leftMargin + 50, y);
+  y += 6;
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Proposed Project:', leftMargin, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(projName, leftMargin + 50, y);
+  y += 6;
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Location:', leftMargin, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(projLoc, leftMargin + 50, y);
+  y += 12;
+  
+  // Equipment Breakdown - MATCH CALCULATOR EXACTLY
+  checkPageBreak(20);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setFillColor(245, 245, 247);
+  doc.rect(leftMargin, y-4, pageWidth-40, 8, 'F');
+  doc.text('Equipment & Fee Breakdown', leftMargin+2, y+2);
+  y += 10;
+  
+  // Group equipment by category
+  const grouped = {};
+  for(const e of equipList){
+    if(!grouped[e.cat]) grouped[e.cat] = [];
+    grouped[e.cat].push(e);
+  }
+  
+  // Use same category order as calculator
+  const cats = CAT_ORDER.filter(c=>grouped[c]).concat(Object.keys(grouped).filter(c=>!CAT_ORDER.includes(c)));
+  
+  for(const cat of cats){
+    const entries = grouped[cat];
+    const label = CAT_LABELS[cat];
+    
+    checkPageBreak(20);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text(label, leftMargin, y);
+    y += 6;
+    
+    doc.setFontSize(8);
+    
+    // ── TR AGGREGATE (refrig-ac) ──
+    if(cat === 'refrig-ac'){
+      const trList = entries.map(e => {
+        const rawTR = conv(e.trCap, e.trUnit, 'TR');
+        return { e, rawTR, totalTR: rawTR * e.qty };
+      });
+      const grandTR = trList.reduce((s,x) => s+x.totalTR, 0);
+      
+      // List each entry
+      for(const {e,rawTR,totalTR} of trList){
+        checkPageBreak(15);
+        const nm = e.desc || 'Unit';
+        const specStr = `${e.trCap} ${e.trUnit}, ${e.qty} unit${e.qty>1?'s':''}`;
+        
+        doc.setFont('helvetica', 'bold');
+        doc.text(nm, leftMargin, y);
+        y += 4;
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(80);
+        doc.text(specStr, leftMargin + 2, y);
+        y += 3;
+        
+        // Conversion if needed
+        if(e.trUnit !== 'TR'){
+          doc.text(`${e.trCap} ${e.trUnit} -> ${rawTR.toFixed(2)} TR/unit`, leftMargin + 2, y);
+          y += 3;
+        }
+        
+        // Entry calculation
+        doc.text(`${e.qty} unit${e.qty>1?'s':''} x ${rawTR.toFixed(2)} TR/unit = ${totalTR.toFixed(2)} TR`, leftMargin + 2, y);
+        y += 5;
+        doc.setFontSize(8);
+        doc.setTextColor(0);
+      }
+      
+      // Grand total TR and tier breakdown
+      checkPageBreak(30);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`TOTAL TR = ${grandTR.toFixed(2)} TR`, leftMargin, y);
+      y += 5;
+      
+      // Apply TR tiers
+      const {lines:tl, total:trFee} = applyTrTiers(grandTR);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(80);
+      
+      for(const line of tl){
+        checkPageBreak(4);
+        // Extract text from HTML structure before stripping tags
+        // The line format is: <div...><span>CALCULATION</span><span>VALUE</span></div>
+        let cleanLine = line;
+        
+        // Remove opening tags and get content
+        cleanLine = cleanLine
+          .replace(/<div[^>]*>/g, '')
+          .replace(/<\/div>/g, '')
+          .replace(/<span class="eb-line-lbl">/g, '')
+          .replace(/<span class="eb-line-val">/g, '|EQUALS|') // Marker for equals
+          .replace(/<\/span>/g, '')
+          .replace(/&times;/g, ' x ')
+          .replace(/&mdash;/g, '-')
+          .replace(/&#8369;/g, 'PHP ')
+          .replace(/₱/g, 'PHP ')
+          .replace(/roundup\(/g, 'roundup(')
+          .replace(/\|EQUALS\|/g, ' = ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        
+        doc.text(cleanLine, leftMargin + 2, y);
+        y += 3;
+      }
+      
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0);
+      doc.text(`Category Total: PHP ${trFee.toFixed(2)}`, leftMargin, y);
+      y += 8;
+      
+    } else {
+      // ── STANDARD CATEGORIES ──
+      for(const e of entries){
+        checkPageBreak(25);
+        
+        const nm = e.desc || 'Unit';
+        let kw=0, m=0, m3=0, ton=0;
+        
+        if(e.power) kw = conv(e.power, e.powerUnit, 'kW');
+        if(e.len) m = conv(e.len, e.lenUnit, 'm');
+        if(e.vol) m3 = conv(e.vol, e.volUnit, 'm3');
+        if(e.wt) ton = conv(e.wt, e.wtUnit, 'ton');
+        
+        // Build specs
+        let specs = [];
+        if(e.power) specs.push(`${e.power} ${e.powerUnit}`);
+        if(e.len) specs.push(`${e.len} ${e.lenUnit}`);
+        if(e.vol) specs.push(`${e.vol} ${e.volUnit}`);
+        if(e.wt) specs.push(`${e.wt} ${e.wtUnit}`);
+        if(e.landings) specs.push(`${e.landings} landings`);
+        const specStr = (specs.length ? specs.join(', ') + ', ' : '') + `${e.qty} unit${e.qty>1?'s':''}`;
+        
+        doc.setFont('helvetica', 'bold');
+        doc.text(nm, leftMargin, y);
+        y += 4;
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(80);
+        doc.text(specStr, leftMargin + 2, y);
+        y += 3;
+        
+        // Show conversions if needed
+        if(e.power && e.powerUnit !== 'kW'){
+          doc.text(`${e.power} ${e.powerUnit} -> ${kw.toFixed(3)} kW`, leftMargin + 2, y);
+          y += 3;
+        }
+        if(e.len && e.lenUnit !== 'm'){
+          doc.text(`${e.len} ${e.lenUnit} -> ${m.toFixed(3)} m`, leftMargin + 2, y);
+          y += 3;
+        }
+        if(e.vol && e.volUnit !== 'm3'){
+          doc.text(`${e.vol} ${e.volUnit} -> ${m3.toFixed(3)} m3`, leftMargin + 2, y);
+          y += 3;
+        }
+        if(e.wt && e.wtUnit !== 'ton'){
+          doc.text(`${e.wt} ${e.wtUnit} -> ${ton.toFixed(3)} ton`, leftMargin + 2, y);
+          y += 3;
+        }
+        
+        // Calculate fee breakdown
+        let calcResult;
+        const isFlat = cat in FLAT_RATES;
+        if(isFlat){
+          const r = FLAT_RATES[cat];
+          calcResult = { lines:[`₱${r.rate} per ${r.unit} (flat rate)`], perUnit:r.rate };
+        } else {
+          switch(cat){
+            case 'ventilation':        calcResult=feeVentilation(kw); break;
+            case 'pump':               calcResult=feePump(kw); break;
+            case 'boiler':             calcResult=feeBoiler(kw); break;
+            case 'generator':          calcResult=feeGenerator(kw); break;
+            case 'combustion':         calcResult=feeCombustion(kw); break;
+            case 'other-machinery':    calcResult=feeOtherMachinery(kw); break;
+            case 'escalator':          calcResult=feeEscalator(m); break;
+            case 'funicular':          calcResult=feeFunicular(kw,m); break;
+            case 'cable-car':          calcResult=feeCableCar(kw,m); break;
+            case 'passenger-elevator': calcResult=feeElevator(500, e.landings||0); break;
+            case 'freight-elevator':   calcResult=feeElevator(400, e.landings||0); break;
+            case 'dumbwaiter':         calcResult=feeElevator(50,  e.landings||0); break;
+            case 'piping':             calcResult=feePiping(m,m3); break;
+            case 'pressure-vessel':    calcResult=feePressureVessel(m3); break;
+            case 'conveyor':           calcResult=feeConveyor(m); break;
+            case 'weighing-scale':     calcResult=feeWeighingScale(ton); break;
+            default:                   calcResult={lines:[],perUnit:0};
+          }
+        }
+        
+        // Show tier breakdown lines
+        if(calcResult.lines && calcResult.lines.length > 0){
+          for(const line of calcResult.lines){
+            checkPageBreak(4);
+            // Extract text from HTML structure before stripping tags
+            // The line format is: <div...><span>CALCULATION</span><span>VALUE</span></div>
+            let cleanLine = line;
+            
+            // Remove opening tags and get content
+            cleanLine = cleanLine
+              .replace(/<div[^>]*>/g, '')
+              .replace(/<\/div>/g, '')
+              .replace(/<span class="eb-line-lbl">/g, '')
+              .replace(/<span class="eb-line-val">/g, '|EQUALS|') // Marker for equals
+              .replace(/<\/span>/g, '')
+              .replace(/&times;/g, ' x ')
+              .replace(/&mdash;/g, '-')
+              .replace(/&rarr;/g, '->')
+              .replace(/&#8369;/g, 'PHP ')
+              .replace(/₱/g, 'PHP ')
+              .replace(/roundup\(/g, 'roundup(')
+              .replace(/\|EQUALS\|/g, ' = ')
+              .replace(/\s+/g, ' ')
+              .trim();
+            
+            doc.text(cleanLine, leftMargin + 2, y);
+            y += 3;
+          }
+        }
+        
+        const entryTotal = calcResult.perUnit * e.qty;
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0);
+        doc.text(`Per Unit Total: PHP ${calcResult.perUnit.toFixed(2)}`, leftMargin + 2, y);
+        y += 4;
+        
+        if(e.qty > 1){
+          doc.setFont('helvetica', 'normal');
+          doc.text(`PHP ${calcResult.perUnit.toFixed(2)} x ${e.qty} units = PHP ${entryTotal.toFixed(2)}`, leftMargin + 2, y);
+          y += 4;
+        }
+        
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Entry Total: PHP ${entryTotal.toFixed(2)}`, leftMargin + 2, y);
+        y += 6;
+      }
+    }
+    
+    y += 3;
+  }
+  
+  // Fee Summary
+  y += 3;
+  checkPageBreak(60);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setFillColor(245, 245, 247);
+  doc.rect(leftMargin, y-4, pageWidth-40, 8, 'F');
+  doc.text('Fee Summary', leftMargin+2, y+2);
+  y += 10;
+  
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  
+  // Recalculate totals
+  const F = currentBaseFee;
+  let runningTotal = F;
+  let yearsLate = 0;
+  let feeAfterYears = 0;
+  let surcharge = 0;
+  let isLate = false;
+  
+  const yearsOn = document.getElementById('years-toggle').checked;
+  if(yearsOn && prevDate !== 'N/A' && currDate !== 'N/A'){
+    const prev = new Date(prevDate + 'T12:00:00');
+    const curr = new Date(currDate + 'T12:00:00');
+    const expiry = new Date(prev);
+    expiry.setFullYear(expiry.getFullYear() + 1);
+    
+    if(curr > expiry){
+      isLate = true;
+      let yc = 0;
+      const chk = new Date(expiry);
+      while(curr > chk){ yc++; chk.setFullYear(chk.getFullYear() + 1); }
+      yearsLate = Math.max(1, yc);
+      feeAfterYears = F * yearsLate;
+      runningTotal = feeAfterYears;
+    }
+  }
+  
+  const scOn = document.getElementById('sc-toggle').checked;
+  if(scOn && isLate){
+    surcharge = runningTotal;
+    runningTotal += surcharge;
+  }
+  
+  let penalty = 0;
+  if(document.getElementById('pen-toggle').checked)
+    penalty = parseFloat(document.getElementById('pen-amount').value) || 0;
+  
+  const total = runningTotal + penalty;
+  
+  // Base fee
+  doc.text('Annual Mechanical Fee', leftMargin, y);
+  doc.text(`PHP ${F.toFixed(2)}`, pageWidth-leftMargin, y, {align: 'right'});
+  y += 6;
+  
+  // Years late
+  if(yearsLate > 0){
+    doc.text(`Years Late`, leftMargin, y);
+    doc.text(`${yearsLate} year${yearsLate>1?'s':''}`, pageWidth-leftMargin, y, {align: 'right'});
+    y += 6;
+    
+    doc.text('Fee x Years Late', leftMargin, y);
+    doc.text(`PHP ${feeAfterYears.toFixed(2)}`, pageWidth-leftMargin, y, {align: 'right'});
+    y += 6;
+  }
+  
+  // Surcharge
+  if(surcharge > 0){
+    doc.text('Surcharge (100%)', leftMargin, y);
+    doc.text(`PHP ${surcharge.toFixed(2)}`, pageWidth-leftMargin, y, {align: 'right'});
+    y += 6;
+  }
+  
+  // Penalty
+  if(penalty > 0){
+    doc.text('Penalty', leftMargin, y);
+    doc.text(`PHP ${penalty.toFixed(2)}`, pageWidth-leftMargin, y, {align: 'right'});
+    y += 6;
+  }
+  
+  // Grand total - round to 1 decimal place
+  y += 2;
+  const totalRounded = Math.round(total * 10) / 10;
+  
+  doc.setDrawColor(29, 29, 31);
+  doc.setLineWidth(0.5);
+  doc.line(leftMargin, y, pageWidth-leftMargin, y);
+  y += 5;
+  
+  doc.setFont('helvetica', 'bold');
+  doc.setFillColor(245, 245, 247);
+  doc.rect(leftMargin, y-3, pageWidth-40, 8, 'F');
+  doc.text('TOTAL AMOUNT DUE', leftMargin, y+2);
+  doc.text(`PHP ${totalRounded.toFixed(1)}`, pageWidth-leftMargin, y+2, {align: 'right'});
+  
+  // Save
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+  doc.save(`mechanical_fees_${timestamp}.pdf`);
+}
+
+
+</script>
+</body>
+</html>
