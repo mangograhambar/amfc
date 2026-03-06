@@ -1365,10 +1365,18 @@ function computeTotals(){
 
 // ── RESET ────────────────────────────────────────────────────────────────────
 function resetAll(){
-  // Confirmation dialog to prevent accidental reset (always show)
-  const confirmed = confirm('Reset All Data?\n\nThis will permanently erase all equipment entries, dates issued, fees, penalties, and surcharges. This action cannot be undone.');
-  if(!confirmed){
-    return; // User cancelled, exit function
+  // Smart confirmation: only show if there's something to reset
+  const hasEquipment = equipList.length > 0;
+  const yearsToggle = document.getElementById('years-toggle').checked;
+  const scToggle = document.getElementById('sc-toggle').checked;
+  const penToggle = document.getElementById('pen-toggle').checked;
+  
+  // Only show confirmation if there's data that would be lost
+  if(hasEquipment || yearsToggle || scToggle || penToggle){
+    const confirmed = confirm('Reset All Data?\n\nThis will permanently erase all equipment entries, dates issued, fees, penalties, and surcharges. This action cannot be undone.');
+    if(!confirmed){
+      return; // User cancelled, exit function
+    }
   }
   
   equipList=[]; entryId=0;
