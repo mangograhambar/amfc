@@ -385,18 +385,20 @@ input:checked+.slider:before{transform:translateX(18px);}
             <option value="sprinkler">Automatic Fire Sprinkler</option>
             <option value="boiler">Boilers</option>
             <option value="cable-car">Cable Car</option>
+            <option value="centralized-ac">Centralized Air Conditioning</option>
             <option value="compressed-air">Compressed Air / Vacuum / Gas Outlet</option>
             <option value="escalator">Escalators / Moving Walks</option>
             <option value="freight-elevator">Freight / Construction Elevator</option>
             <option value="funicular">Funicular</option>
             <option value="gas-meter">Gas Meter Testing</option>
             <option value="generator">Generating Set</option>
+            <option value="ice-plant">Ice Plant</option>
             <option value="mechanical-ride">Mechanical Ride</option>
             <option value="ventilation">Mechanical Ventilation</option>
             <option value="dumbwaiter">Motor Driven Dumbwaiter</option>
             <option value="combustion">Other Internal Combustion Engines</option>
             <option value="other-machinery">Other Machinery / Equipment</option>
-            <option value="refrig-ac">Packaged / Centralized Air Conditioning</option>
+            <option value="packaged-ac">Packaged Air Conditioning</option>
             <option value="passenger-elevator">Passenger / Car Elevator / Wheelchair Lift</option>
             <option value="conveyor">Pneumatic Tubes / Conveyors / Monorails</option>
             <option value="piping">Power Piping</option>
@@ -404,7 +406,7 @@ input:checked+.slider:before{transform:translateX(18px);}
             <option value="water-heater">Pressurized Water Heater</option>
             <option value="pressure-vessel">Pressure Vessel</option>
             <option value="pump">Pumps</option>
-            <option value="refrig-ac">Refrigeration / Ice Plant</option>
+            <option value="refrigeration">Refrigeration</option>
             <option value="weighing-scale">Weighing Scale Structure</option>
             <option value="window-ac">Window Type Air Conditioner</option>
           </select>
@@ -474,7 +476,7 @@ input:checked+.slider:before{transform:translateX(18px);}
 
       </div><!-- /entry-grid -->
 
-      <!-- Buttons on their own line — no overlap possible -->
+      <!-- Buttons -->
       <div class="btn-row">
         <button class="btn-add" onclick="addToList()">Add to List</button>
         <button class="btn-reset" onclick="resetAll()">Reset All</button>
@@ -632,7 +634,10 @@ function conv(val,from,to){
 // ── CATEGORY FIELD CONFIG ────────────────────────────────────────────────────
 // 'req' = required, 'opt' = optional (will still compute partial fee)
 const CAT_FIELDS = {
-  'refrig-ac':          {tr:'req'},
+  'centralized-ac':     {tr:'req'},
+  'packaged-ac':        {tr:'req'},
+  'ice-plant':          {tr:'req'},
+  'refrigeration':      {tr:'req'},
   'window-ac':          {},
   'ventilation':        {power:'req'},
   'boiler':             {power:'req'},
@@ -659,7 +664,10 @@ const CAT_FIELDS = {
 };
 
 const CAT_LABELS = {
-  'refrig-ac':          'Refrigeration / Ice Plant / Packaged/Centralized AC',
+  'centralized-ac':     'Centralized Air Conditioning',
+  'packaged-ac':        'Packaged Air Conditioning',
+  'ice-plant':          'Ice Plant',
+  'refrigeration':      'Refrigeration',
   'window-ac':          'Window Type Air Conditioner',
   'ventilation':        'Mechanical Ventilation',
   'boiler':             'Boilers',
@@ -1207,7 +1215,8 @@ const FLAT_RATES = {
 };
 
 const CAT_ORDER = [
-  'refrig-ac','window-ac','ventilation','pump','escalator','funicular','cable-car',
+  'centralized-ac','packaged-ac','ice-plant','refrigeration','window-ac',
+  'ventilation','pump','escalator','funicular','cable-car',
   'passenger-elevator','freight-elevator','dumbwaiter','boiler','water-heater','sprinkler',
   'generator','compressed-air','piping','combustion','other-machinery','pressure-vessel',
   'conveyor','weighing-scale','pressure-gauge','gas-meter','mechanical-ride'
@@ -1228,143 +1237,217 @@ function renderBreakdown(){
   const cats = CAT_ORDER.filter(c=>grouped[c]).concat(Object.keys(grouped).filter(c=>!CAT_ORDER.includes(c)));
 
   let html = '', grandTotal = 0;
+  
+  // Separate TR categories from others
+  const trCategories = ['centralized-ac','packaged-ac','ice-plant','refrigeration'];
+  const trCats = cats.filter(c => trCategories.includes(c));
+  const nonTrCats = cats.filter(c => !trCategories.includes(c));
+  const trSummaries = [];
 
-  for(const cat of cats){
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SECTION 1: RENDER TR CATEGORIES FIRST
+  // ═══════════════════════════════════════════════════════════════════════════
+  for(const cat of trCats){
     const entries = grouped[cat];
     const label = CAT_LABELS[cat];
-    let catTotal = 0, bodyHtml = '';
+    let bodyHtml = '';
+    
+    const trList = entries.map(e => {
+      const rawTR = conv(e.trCap, e.trUnit, 'TR');
+      return { e, rawTR, totalTR: rawTR * e.qty };
+    });
+    const grandTR = trList.reduce((s,x) => s+x.totalTR, 0);
+    const totalUnits = entries.reduce((s,e) => s + e.qty, 0);
 
-    // ── TR AGGREGATE ──────────────────────────────────────────────────────────
-    if(cat === 'refrig-ac'){
-      const trList = entries.map(e => {
-        const rawTR = conv(e.trCap, e.trUnit, 'TR');
-        return { e, rawTR, totalTR: rawTR * e.qty };
-      });
-      const grandTR = trList.reduce((s,x) => s+x.totalTR, 0);
+    // Store summary for aggregation
+    trSummaries.push({ cat: label, units: totalUnits, tr: grandTR });
 
-      // Entry list
-      let listHtml = '';
-      for(const {e,rawTR,totalTR} of trList){
-        const nm = e.desc || 'Unit';
-        let convNote = '';
-        if(e.trUnit !== 'TR')
-          convNote = `<div class="eb-convs"><span class="eb-conv">${e.trCap} ${e.trUnit} &rarr; ${rawTR.toFixed(2)} TR/unit</span></div>`;
-        const specStr = `${e.trCap} ${e.trUnit}, ${e.qty} unit${e.qty>1?'s':''}`;
-        listHtml += `<div class="eb-wrap"><div class="eb">
-          <div class="eb-hdr">
-            <div class="eb-hdr-title">${nm}</div>
-            <div class="eb-hdr-sub">${specStr}</div>
-          </div>
-          ${convNote}
-          <div class="fee-lines">
-            ${fLine(`${e.qty} unit${e.qty>1?'s':''} &times; ${rawTR.toFixed(2)} TR/unit`, `${totalTR.toFixed(2)} TR`)}
-          </div>
-        </div></div>`;
-      }
-
-      // TR total + tier breakdown
-      const {lines:tl, total:trFee} = applyTrTiers(grandTR);
-      catTotal = trFee;
-
-      const trBox = `<div class="tr-box">
-        <div class="tr-box-title">Tiered Fee on Grand Total TR</div>
-        <div class="tr-total-line">TOTAL TR = ${grandTR.toFixed(2)} TR</div>
-        <div class="fee-lines">${tl.join('')}</div>
-      </div>`;
-      bodyHtml = `${listHtml}<div class="eb"><div style="padding:0 0 10px;">${trBox}</div></div>`;
-
-    } else {
-      // ── STANDARD CATEGORIES ───────────────────────────────────────────────
-      for(const e of entries){
-        const nm = e.desc || 'Unit';
-        let convs = [], kw=0, m=0, m3=0, ton=0, calcResult, partial=false;
-
-        if(e.power){
-          kw = conv(e.power, e.powerUnit, 'kW');
-          if(e.powerUnit !== 'kW') convs.push(`${e.power} ${e.powerUnit} &rarr; ${kw.toFixed(3)} kW`);
-        }
-        if(e.len){
-          m = conv(e.len, e.lenUnit, 'm');
-          if(e.lenUnit !== 'm') convs.push(`${e.len} ${e.lenUnit} &rarr; ${m.toFixed(3)} m`);
-        }
-        if(e.vol){
-          m3 = conv(e.vol, e.volUnit, 'm3');
-          if(e.volUnit !== 'm3') convs.push(`${e.vol} ${e.volUnit} &rarr; ${m3.toFixed(3)} m&sup3;`);
-        }
-        if(e.wt){
-          ton = conv(e.wt, e.wtUnit, 'ton');
-          if(e.wtUnit !== 'ton') convs.push(`${e.wt} ${e.wtUnit} &rarr; ${ton.toFixed(3)} ton`);
-        }
-
-        const isFlat = cat in FLAT_RATES;
-        if(isFlat){
-          const r = FLAT_RATES[cat];
-          calcResult = { lines:[fLine(`₱${r.rate} per ${r.unit} (flat rate)`, php2(r.rate))], perUnit:r.rate };
-        } else {
-          switch(cat){
-            case 'ventilation':        calcResult=feeVentilation(kw); break;
-            case 'pump':               calcResult=feePump(kw); break;
-            case 'boiler':             calcResult=feeBoiler(kw); break;
-            case 'generator':          calcResult=feeGenerator(kw); break;
-            case 'combustion':         calcResult=feeCombustion(kw); break;
-            case 'other-machinery':    calcResult=feeOtherMachinery(kw); break;
-            case 'escalator':          calcResult=feeEscalator(m); break;
-            case 'funicular':          calcResult=feeFunicular(kw,m); break;
-            case 'cable-car':          calcResult=feeCableCar(kw,m); break;
-            case 'passenger-elevator': calcResult=feeElevator(500, e.landings||0); break;
-            case 'freight-elevator':   calcResult=feeElevator(400, e.landings||0); break;
-            case 'dumbwaiter':         calcResult=feeElevator(50,  e.landings||0); break;
-            case 'piping':             calcResult=feePiping(m,m3); break;
-            case 'pressure-vessel':    calcResult=feePressureVessel(m3); break;
-            case 'conveyor':           calcResult=feeConveyor(m); break;
-            case 'weighing-scale':     calcResult=feeWeighingScale(ton); break;
-            default:                   calcResult={lines:[],perUnit:0};
-          }
-        }
-
-        const entryTotal = calcResult.perUnit * e.qty;
-        catTotal += entryTotal;
-        partial = calcResult.partial || false;
-
-        // Build specs string
-        let specs = [];
-        if(e.power)    specs.push(`${e.power} ${e.powerUnit}`);
-        if(e.len)      specs.push(`${e.len} ${e.lenUnit}`);
-        if(e.vol)      specs.push(`${e.vol} ${e.volUnit}`);
-        if(e.wt)       specs.push(`${e.wt} ${e.wtUnit}`);
-        if(e.landings) specs.push(`${e.landings} landings`);
-
-        const specStr = (specs.length ? specs.join(', ') + ', ' : '') + `${e.qty} unit${e.qty>1?'s':''}`;
-        const convHtml = convs.length
-          ? `<div class="eb-convs">${convs.map(c=>`<span class="eb-conv">${c}</span>`).join(' ')}</div>`
-          : '';
-
-        // Build entry block
-        let eb = `<div class="eb-wrap"><div class="eb">
-          <div class="eb-hdr">
-            <div class="eb-hdr-title">${nm}</div>
-            <div class="eb-hdr-sub">${specStr}</div>
-          </div>
-          ${convHtml}
-          <div class="fee-lines">${calcResult.lines.join('')}</div>
-          <div class="eb-totals">
-            <div class="eb-utotal">Per Unit Total: ${php2(calcResult.perUnit)}</div>`;
-        if(e.qty > 1)
-          eb += `<div class="eb-qty">${php2(calcResult.perUnit)} &times; ${e.qty} units = ${php2(entryTotal)}</div>`;
-        eb += `<div class="eb-etotal">Entry Total: ${php2(entryTotal)}</div>`;
-        if(partial)
-          eb += `<div class="eb-note">Note: Partial fee computed — one or more optional fields were not provided.</div>`;
-        eb += `</div></div></div>`;
-        bodyHtml += eb;
-      }
+    // Entry list
+    for(const {e,rawTR,totalTR} of trList){
+      const nm = e.desc || 'Unit';
+      let convNote = '';
+      if(e.trUnit !== 'TR')
+        convNote = `<div class="eb-convs"><span class="eb-conv">${e.trCap} ${e.trUnit} &rarr; ${rawTR.toFixed(2)} TR/unit</span></div>`;
+      const specStr = `${e.trCap} ${e.trUnit}, ${e.qty} unit${e.qty>1?'s':''}`;
+      bodyHtml += `<div class="eb-wrap"><div class="eb">
+        <div class="eb-hdr">
+          <div class="eb-hdr-title">${nm}</div>
+          <div class="eb-hdr-sub">${specStr}</div>
+        </div>
+        ${convNote}
+        <div class="fee-lines">
+          ${fLine(`${e.qty} unit${e.qty>1?'s':''} &times; ${rawTR.toFixed(2)} TR/unit`, `${totalTR.toFixed(2)} TR`)}
+        </div>
+      </div></div>`;
     }
-
-    grandTotal += catTotal;
+    
+    // Build category block with totals in bottom row (no fee shown for individual TR cats)
     html += `<div class="cat-block">
       <div class="cat-hdr">${label}</div>
       <div class="cat-body">${bodyHtml}</div>
       <div class="cat-total-row">
-        <div class="cat-total-lbl">Total &mdash; ${label}</div>
+        <div class="cat-total-lbl">Total &mdash; ${label}: ${totalUnits} unit${totalUnits>1?'s':''}, ${grandTR.toFixed(2)} TR</div>
+        <div class="cat-total-val"></div>
+      </div>
+    </div>`;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SECTION 2: RENDER TR AGGREGATION
+  // ═══════════════════════════════════════════════════════════════════════════
+  if(trSummaries.length > 0){
+    const totalTR = trSummaries.reduce((s,x) => s+x.tr, 0);
+    const {lines:tl, total:trFee} = applyTrTiers(totalTR);
+    
+    let trSummaryHtml = `<div style="background:var(--accent-dim);border:1px solid rgba(0,113,227,.15);border-radius:10px;padding:14px 16px;margin:12px 0;">
+      <div style="font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;">TR-Based Equipment Summary</div>`;
+    
+    for(const summary of trSummaries){
+      trSummaryHtml += `<div style="font-size:12px;color:var(--text-primary);padding:3px 0;">${summary.cat}: <span style="font-weight:500;">${summary.units} units</span>, <span style="font-weight:500;font-family:var(--mono);">${summary.tr.toFixed(2)} TR</span></div>`;
+    }
+    
+    trSummaryHtml += `<div style="border-top:1px solid rgba(0,113,227,.15);margin-top:8px;padding-top:8px;">
+      <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:6px;">GRAND TOTAL TR: ${totalTR.toFixed(2)} TR</div>
+      <div style="font-size:11px;font-weight:500;color:var(--accent);margin-bottom:6px;">Tiered Fee Calculation:</div>
+      <div class="fee-lines">${tl.join('')}</div>
+    </div></div>`;
+    
+    const totalTRUnits = trSummaries.reduce((s,x) => s+x.units, 0);
+    
+    html += `<div class="cat-block">
+      <div class="cat-hdr">TR-Based Equipment Aggregation</div>
+      <div class="cat-body"><div class="eb"><div style="padding:0 0 10px;">${trSummaryHtml}</div></div></div>
+      <div class="cat-total-row">
+        <div class="cat-total-lbl">Total &mdash; All TR Equipment: ${totalTRUnits} unit${totalTRUnits>1?'s':''}, ${totalTR.toFixed(2)} TR</div>
+        <div class="cat-total-val">${php2(trFee)}</div>
+      </div>
+    </div>`;
+    
+    grandTotal += trFee;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SECTION 3: RENDER ALL OTHER CATEGORIES
+  // ═══════════════════════════════════════════════════════════════════════════
+  for(const cat of nonTrCats){
+    const entries = grouped[cat];
+    const label = CAT_LABELS[cat];
+    let catTotal = 0, bodyHtml = '';
+    let totalUnits = 0;
+    let totalMetric = 0;
+    let metricLabel = '';
+    
+    for(const e of entries){
+      const nm = e.desc || 'Unit';
+      let convs = [], kw=0, m=0, m3=0, ton=0, calcResult, partial=false;
+
+      totalUnits += e.qty;
+
+      if(e.power){
+        kw = conv(e.power, e.powerUnit, 'kW');
+        totalMetric += kw * e.qty;
+        metricLabel = 'kW';
+        if(e.powerUnit !== 'kW') convs.push(`${e.power} ${e.powerUnit} &rarr; ${kw.toFixed(3)} kW`);
+      }
+      if(e.len){
+        m = conv(e.len, e.lenUnit, 'm');
+        totalMetric += m * e.qty;
+        metricLabel = 'm';
+        if(e.lenUnit !== 'm') convs.push(`${e.len} ${e.lenUnit} &rarr; ${m.toFixed(3)} m`);
+      }
+      if(e.vol){
+        m3 = conv(e.vol, e.volUnit, 'm3');
+        totalMetric += m3 * e.qty;
+        metricLabel = 'm³';
+        if(e.volUnit !== 'm3') convs.push(`${e.vol} ${e.volUnit} &rarr; ${m3.toFixed(3)} m&sup3;`);
+      }
+      if(e.wt){
+        ton = conv(e.wt, e.wtUnit, 'ton');
+        totalMetric += ton * e.qty;
+        metricLabel = 'tons';
+        if(e.wtUnit !== 'ton') convs.push(`${e.wt} ${e.wtUnit} &rarr; ${ton.toFixed(3)} ton`);
+      }
+      if(e.landings){
+        totalMetric += e.landings * e.qty;
+        metricLabel = 'landings';
+      }
+
+      const isFlat = cat in FLAT_RATES;
+      if(isFlat){
+        const r = FLAT_RATES[cat];
+        calcResult = { lines:[fLine(`₱${r.rate} per ${r.unit} (flat rate)`, php2(r.rate))], perUnit:r.rate };
+      } else {
+        switch(cat){
+          case 'ventilation':        calcResult=feeVentilation(kw); break;
+          case 'pump':               calcResult=feePump(kw); break;
+          case 'boiler':             calcResult=feeBoiler(kw); break;
+          case 'generator':          calcResult=feeGenerator(kw); break;
+          case 'combustion':         calcResult=feeCombustion(kw); break;
+          case 'other-machinery':    calcResult=feeOtherMachinery(kw); break;
+          case 'escalator':          calcResult=feeEscalator(m); break;
+          case 'funicular':          calcResult=feeFunicular(kw,m); break;
+          case 'cable-car':          calcResult=feeCableCar(kw,m); break;
+          case 'passenger-elevator': calcResult=feeElevator(500, e.landings||0); break;
+          case 'freight-elevator':   calcResult=feeElevator(400, e.landings||0); break;
+          case 'dumbwaiter':         calcResult=feeElevator(50,  e.landings||0); break;
+          case 'piping':             calcResult=feePiping(m,m3); break;
+          case 'pressure-vessel':    calcResult=feePressureVessel(m3); break;
+          case 'conveyor':           calcResult=feeConveyor(m); break;
+          case 'weighing-scale':     calcResult=feeWeighingScale(ton); break;
+          default:                   calcResult={lines:[],perUnit:0};
+        }
+      }
+
+      const entryTotal = calcResult.perUnit * e.qty;
+      catTotal += entryTotal;
+      partial = calcResult.partial || false;
+
+      // Build specs string
+      let specs = [];
+      if(e.power)    specs.push(`${e.power} ${e.powerUnit}`);
+      if(e.len)      specs.push(`${e.len} ${e.lenUnit}`);
+      if(e.vol)      specs.push(`${e.vol} ${e.volUnit}`);
+      if(e.wt)       specs.push(`${e.wt} ${e.wtUnit}`);
+      if(e.landings) specs.push(`${e.landings} landings`);
+
+      const specStr = (specs.length ? specs.join(', ') + ', ' : '') + `${e.qty} unit${e.qty>1?'s':''}`;
+      const convHtml = convs.length
+        ? `<div class="eb-convs">${convs.map(c=>`<span class="eb-conv">${c}</span>`).join(' ')}</div>`
+        : '';
+
+      // Build entry block
+      let eb = `<div class="eb-wrap"><div class="eb">
+        <div class="eb-hdr">
+          <div class="eb-hdr-title">${nm}</div>
+          <div class="eb-hdr-sub">${specStr}</div>
+        </div>
+        ${convHtml}
+        <div class="fee-lines">${calcResult.lines.join('')}</div>
+        <div class="eb-totals">
+          <div class="eb-utotal">Per Unit Total: ${php2(calcResult.perUnit)}</div>`;
+      if(e.qty > 1)
+        eb += `<div class="eb-qty">${php2(calcResult.perUnit)} &times; ${e.qty} units = ${php2(entryTotal)}</div>`;
+      eb += `<div class="eb-etotal">Entry Total: ${php2(entryTotal)}</div>`;
+      if(partial)
+        eb += `<div class="eb-note">Note: Partial fee computed — one or more optional fields were not provided.</div>`;
+      eb += `</div></div></div>`;
+      bodyHtml += eb;
+    }
+    
+    grandTotal += catTotal;
+    
+    // Build total label with units and metric
+    let totalLabel = `Total &mdash; ${label}: ${totalUnits} unit${totalUnits>1?'s':''}`;
+    if(metricLabel && totalMetric > 0){
+      const metricValue = totalMetric.toFixed(metricLabel.includes('kW') || metricLabel.includes('TR') ? 2 : 3);
+      totalLabel += `, ${metricValue} ${metricLabel}`;
+    }
+    
+    html += `<div class="cat-block">
+      <div class="cat-hdr">${label}</div>
+      <div class="cat-body">${bodyHtml}</div>
+      <div class="cat-total-row">
+        <div class="cat-total-lbl">${totalLabel}</div>
         <div class="cat-total-val">${php2(catTotal)}</div>
       </div>
     </div>`;
@@ -1677,14 +1760,22 @@ function exportPDF(){
   // Use same category order as calculator
   const cats = CAT_ORDER.filter(c=>grouped[c]).concat(Object.keys(grouped).filter(c=>!CAT_ORDER.includes(c)));
   
-  for(const cat of cats){
+  // Define TR categories
+  const trCategories = ['centralized-ac','packaged-ac','ice-plant','refrigeration'];
+  const trCats = cats.filter(c => trCategories.includes(c));
+  const nonTrCats = cats.filter(c => !trCategories.includes(c));
+  const trSummaries = [];
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SECTION 1: RENDER TR CATEGORIES FIRST
+  // ═══════════════════════════════════════════════════════════════════════════
+  for(const cat of trCats){
     const entries = grouped[cat];
     const label = CAT_LABELS[cat];
     
     checkPageBreak(20);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    // Wrap category label if too long
     const categoryLines = doc.splitTextToSize(label, pageWidth - 40);
     categoryLines.forEach((line, i) => {
       doc.text(line, leftMargin, y + (i * 5));
@@ -1693,222 +1784,296 @@ function exportPDF(){
     
     doc.setFontSize(8);
     
-    // ── TR AGGREGATE (refrig-ac) ──
-    if(cat === 'refrig-ac'){
-      const trList = entries.map(e => {
-        const rawTR = conv(e.trCap, e.trUnit, 'TR');
-        return { e, rawTR, totalTR: rawTR * e.qty };
-      });
-      const grandTR = trList.reduce((s,x) => s+x.totalTR, 0);
+    const trList = entries.map(e => {
+      const rawTR = conv(e.trCap, e.trUnit, 'TR');
+      return { e, rawTR, totalTR: rawTR * e.qty };
+    });
+    const grandTR = trList.reduce((s,x) => s+x.totalTR, 0);
+    const totalUnits = entries.reduce((s,e) => s + e.qty, 0);
+    
+    // Store summary for aggregation
+    trSummaries.push({ cat: label, units: totalUnits, tr: grandTR });
+    
+    // List each entry
+    for(const {e,rawTR,totalTR} of trList){
+      checkPageBreak(15);
+      const nm = e.desc || 'Unit';
+      const specStr = `${e.trCap} ${e.trUnit}, ${e.qty} unit${e.qty>1?'s':''}`;
       
-      // List each entry
-      for(const {e,rawTR,totalTR} of trList){
-        checkPageBreak(15);
-        const nm = e.desc || 'Unit';
-        const specStr = `${e.trCap} ${e.trUnit}, ${e.qty} unit${e.qty>1?'s':''}`;
-        
-        doc.setFont('helvetica', 'bold');
-        const nameLines = doc.splitTextToSize(nm, pageWidth - 40);
-        nameLines.forEach((line, i) => {
-          doc.text(line, leftMargin, y + (i * 4));
-        });
-        y += nameLines.length * 4;
-        
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7);
-        doc.setTextColor(80);
-        doc.text(specStr, leftMargin + 2, y);
-        y += 3;
-        
-        // Conversion if needed
-        if(e.trUnit !== 'TR'){
-          doc.text(`${e.trCap} ${e.trUnit} -> ${rawTR.toFixed(2)} TR/unit`, leftMargin + 2, y);
-          y += 3;
-        }
-        
-        // Entry calculation
-        doc.text(`${e.qty} unit${e.qty>1?'s':''} x ${rawTR.toFixed(2)} TR/unit = ${totalTR.toFixed(2)} TR`, leftMargin + 2, y);
-        y += 5;
-        doc.setFontSize(8);
-        doc.setTextColor(0);
-      }
-      
-      // Grand total TR and tier breakdown
-      checkPageBreak(30);
       doc.setFont('helvetica', 'bold');
-      doc.text(`TOTAL TR = ${grandTR.toFixed(2)} TR`, leftMargin, y);
-      y += 5;
+      const nameLines = doc.splitTextToSize(nm, pageWidth - 40);
+      nameLines.forEach((line, i) => {
+        doc.text(line, leftMargin, y + (i * 4));
+      });
+      y += nameLines.length * 4;
       
-      // Apply TR tiers
-      const {lines:tl, total:trFee} = applyTrTiers(grandTR);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7);
       doc.setTextColor(80);
+      doc.text(specStr, leftMargin + 2, y);
+      y += 3;
       
-      for(const line of tl){
-        checkPageBreak(4);
-        // Extract text from HTML structure before stripping tags
-        // The line format is: <div...><span>CALCULATION</span><span>VALUE</span></div>
-        let cleanLine = line;
-        
-        // Remove opening tags and get content
-        cleanLine = cleanLine
-          .replace(/<div[^>]*>/g, '')
-          .replace(/<\/div>/g, '')
-          .replace(/<span class="eb-line-lbl">/g, '')
-          .replace(/<span class="eb-line-val">/g, '|EQUALS|') // Marker for equals
-          .replace(/<\/span>/g, '')
-          .replace(/&times;/g, ' x ')
-          .replace(/&mdash;/g, '-')
-          .replace(/&#8369;/g, 'PHP ')
-          .replace(/₱/g, 'PHP ')
-          .replace(/roundup\(/g, 'roundup(')
-          .replace(/\|EQUALS\|/g, ' = ')
-          .replace(/\s+/g, ' ')
-          .trim();
-        
-        doc.text(cleanLine, leftMargin + 2, y);
+      // Conversion if needed
+      if(e.trUnit !== 'TR'){
+        doc.text(`${e.trCap} ${e.trUnit} -> ${rawTR.toFixed(2)} TR/unit`, leftMargin + 2, y);
         y += 3;
       }
+      
+      // Entry calculation
+      doc.text(`${e.qty} unit${e.qty>1?'s':''} x ${rawTR.toFixed(2)} TR/unit = ${totalTR.toFixed(2)} TR`, leftMargin + 2, y);
+      y += 5;
+      doc.setFontSize(8);
+      doc.setTextColor(0);
+    }
+    
+    // Category total row (no fee for individual TR categories)
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Total - ${label}: ${totalUnits} unit${totalUnits>1?'s':''}, ${grandTR.toFixed(2)} TR`, leftMargin, y);
+    y += 8;
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SECTION 2: RENDER TR AGGREGATION
+  // ═══════════════════════════════════════════════════════════════════════════
+  if(trSummaries.length > 0){
+    const totalTR = trSummaries.reduce((s,x) => s+x.tr, 0);
+    const {lines:tl, total:trFee} = applyTrTiers(totalTR);
+    
+    checkPageBreak(40);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('TR-Based Equipment Aggregation', leftMargin, y);
+    y += 6;
+    
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80);
+    
+    // Show individual TR category summaries
+    for(const summary of trSummaries){
+      doc.text(`${summary.cat}: ${summary.units} units, ${summary.tr.toFixed(2)} TR`, leftMargin + 2, y);
+      y += 4;
+    }
+    
+    y += 2;
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0);
+    doc.text(`GRAND TOTAL TR: ${totalTR.toFixed(2)} TR`, leftMargin + 2, y);
+    y += 5;
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(80);
+    
+    for(const line of tl){
+      checkPageBreak(4);
+      let cleanLine = line;
+      cleanLine = cleanLine
+        .replace(/<div[^>]*>/g, '')
+        .replace(/<\/div>/g, '')
+        .replace(/<span class="eb-line-lbl">/g, '')
+        .replace(/<span class="eb-line-val">/g, '|EQUALS|')
+        .replace(/<\/span>/g, '')
+        .replace(/&times;/g, ' x ')
+        .replace(/&mdash;/g, '-')
+        .replace(/&#8369;/g, 'PHP ')
+        .replace(/₱/g, 'PHP ')
+        .replace(/roundup\(/g, 'roundup(')
+        .replace(/\|EQUALS\|/g, ' = ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      doc.text(cleanLine, leftMargin + 2, y);
+      y += 3;
+    }
+    
+    const totalTRUnits = trSummaries.reduce((s,x) => s+x.units, 0);
+    
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0);
+    doc.text(`Total - All TR Equipment: ${totalTRUnits} unit${totalTRUnits>1?'s':''}, ${totalTR.toFixed(2)} TR = PHP ${trFee.toFixed(2)}`, leftMargin, y);
+    y += 10;
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SECTION 3: RENDER ALL OTHER CATEGORIES
+  // ═══════════════════════════════════════════════════════════════════════════
+  for(const cat of nonTrCats){
+    const entries = grouped[cat];
+    const label = CAT_LABELS[cat];
+    let totalUnits = 0;
+    let totalMetric = 0;
+    let metricLabel = '';
+    let catTotal = 0;
+    
+    checkPageBreak(20);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    const categoryLines = doc.splitTextToSize(label, pageWidth - 40);
+    categoryLines.forEach((line, i) => {
+      doc.text(line, leftMargin, y + (i * 5));
+    });
+    y += categoryLines.length * 5 + 1;
+    
+    doc.setFontSize(8);
+    
+    for(const e of entries){
+      checkPageBreak(25);
+      
+      const nm = e.desc || 'Unit';
+      let kw=0, m=0, m3=0, ton=0;
+      
+      totalUnits += e.qty;
+      
+      if(e.power){
+        kw = conv(e.power, e.powerUnit, 'kW');
+        totalMetric += kw * e.qty;
+        metricLabel = 'kW';
+      }
+      if(e.len){
+        m = conv(e.len, e.lenUnit, 'm');
+        totalMetric += m * e.qty;
+        metricLabel = 'm';
+      }
+      if(e.vol){
+        m3 = conv(e.vol, e.volUnit, 'm3');
+        totalMetric += m3 * e.qty;
+        metricLabel = 'm3';
+      }
+      if(e.wt){
+        ton = conv(e.wt, e.wtUnit, 'ton');
+        totalMetric += ton * e.qty;
+        metricLabel = 'tons';
+      }
+      if(e.landings){
+        totalMetric += e.landings * e.qty;
+        metricLabel = 'landings';
+      }
+      
+      // Build specs
+      let specs = [];
+      if(e.power) specs.push(`${e.power} ${e.powerUnit}`);
+      if(e.len) specs.push(`${e.len} ${e.lenUnit}`);
+      if(e.vol) specs.push(`${e.vol} ${e.volUnit}`);
+      if(e.wt) specs.push(`${e.wt} ${e.wtUnit}`);
+      if(e.landings) specs.push(`${e.landings} landings`);
+      const specStr = (specs.length ? specs.join(', ') + ', ' : '') + `${e.qty} unit${e.qty>1?'s':''}`;
+      
+      doc.setFont('helvetica', 'bold');
+      const nameLines = doc.splitTextToSize(nm, pageWidth - 40);
+      nameLines.forEach((line, i) => {
+        doc.text(line, leftMargin, y + (i * 4));
+      });
+      y += nameLines.length * 4;
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(80);
+      doc.text(specStr, leftMargin + 2, y);
+      y += 3;
+      
+      // Show conversions if needed
+      if(e.power && e.powerUnit !== 'kW'){
+        doc.text(`${e.power} ${e.powerUnit} -> ${kw.toFixed(3)} kW`, leftMargin + 2, y);
+        y += 3;
+      }
+      if(e.len && e.lenUnit !== 'm'){
+        doc.text(`${e.len} ${e.lenUnit} -> ${m.toFixed(3)} m`, leftMargin + 2, y);
+        y += 3;
+      }
+      if(e.vol && e.volUnit !== 'm3'){
+        doc.text(`${e.vol} ${e.volUnit} -> ${m3.toFixed(3)} m3`, leftMargin + 2, y);
+        y += 3;
+      }
+      if(e.wt && e.wtUnit !== 'ton'){
+        doc.text(`${e.wt} ${e.wtUnit} -> ${ton.toFixed(3)} ton`, leftMargin + 2, y);
+        y += 3;
+      }
+      
+      // Calculate fee breakdown
+      let calcResult;
+      const isFlat = cat in FLAT_RATES;
+      if(isFlat){
+        const r = FLAT_RATES[cat];
+        calcResult = { lines:[`₱${r.rate} per ${r.unit} (flat rate)`], perUnit:r.rate };
+      } else {
+        switch(cat){
+          case 'ventilation':        calcResult=feeVentilation(kw); break;
+          case 'pump':               calcResult=feePump(kw); break;
+          case 'boiler':             calcResult=feeBoiler(kw); break;
+          case 'generator':          calcResult=feeGenerator(kw); break;
+          case 'combustion':         calcResult=feeCombustion(kw); break;
+          case 'other-machinery':    calcResult=feeOtherMachinery(kw); break;
+          case 'escalator':          calcResult=feeEscalator(m); break;
+          case 'funicular':          calcResult=feeFunicular(kw,m); break;
+          case 'cable-car':          calcResult=feeCableCar(kw,m); break;
+          case 'passenger-elevator': calcResult=feeElevator(500, e.landings||0); break;
+          case 'freight-elevator':   calcResult=feeElevator(400, e.landings||0); break;
+          case 'dumbwaiter':         calcResult=feeElevator(50,  e.landings||0); break;
+          case 'piping':             calcResult=feePiping(m,m3); break;
+          case 'pressure-vessel':    calcResult=feePressureVessel(m3); break;
+          case 'conveyor':           calcResult=feeConveyor(m); break;
+          case 'weighing-scale':     calcResult=feeWeighingScale(ton); break;
+          default:                   calcResult={lines:[],perUnit:0};
+        }
+      }
+      
+      // Show tier breakdown lines
+      if(calcResult.lines && calcResult.lines.length > 0){
+        for(const line of calcResult.lines){
+          checkPageBreak(4);
+          let cleanLine = line;
+          cleanLine = cleanLine
+            .replace(/<div[^>]*>/g, '')
+            .replace(/<\/div>/g, '')
+            .replace(/<span class="eb-line-lbl">/g, '')
+            .replace(/<span class="eb-line-val">/g, '|EQUALS|')
+            .replace(/<\/span>/g, '')
+            .replace(/&times;/g, ' x ')
+            .replace(/&mdash;/g, '-')
+            .replace(/&rarr;/g, '->')
+            .replace(/&#8369;/g, 'PHP ')
+            .replace(/₱/g, 'PHP ')
+            .replace(/roundup\(/g, 'roundup(')
+            .replace(/\|EQUALS\|/g, ' = ')
+            .replace(/\s+/g, ' ')
+            .trim();
+          doc.text(cleanLine, leftMargin + 2, y);
+          y += 3;
+        }
+      }
+      
+      const entryTotal = calcResult.perUnit * e.qty;
+      catTotal += entryTotal;
       
       doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(0);
-      doc.text(`Category Total: PHP ${trFee.toFixed(2)}`, leftMargin, y);
-      y += 8;
+      doc.text(`Per Unit Total: PHP ${calcResult.perUnit.toFixed(2)}`, leftMargin + 2, y);
+      y += 4;
       
-    } else {
-      // ── STANDARD CATEGORIES ──
-      for(const e of entries){
-        checkPageBreak(25);
-        
-        const nm = e.desc || 'Unit';
-        let kw=0, m=0, m3=0, ton=0;
-        
-        if(e.power) kw = conv(e.power, e.powerUnit, 'kW');
-        if(e.len) m = conv(e.len, e.lenUnit, 'm');
-        if(e.vol) m3 = conv(e.vol, e.volUnit, 'm3');
-        if(e.wt) ton = conv(e.wt, e.wtUnit, 'ton');
-        
-        // Build specs
-        let specs = [];
-        if(e.power) specs.push(`${e.power} ${e.powerUnit}`);
-        if(e.len) specs.push(`${e.len} ${e.lenUnit}`);
-        if(e.vol) specs.push(`${e.vol} ${e.volUnit}`);
-        if(e.wt) specs.push(`${e.wt} ${e.wtUnit}`);
-        if(e.landings) specs.push(`${e.landings} landings`);
-        const specStr = (specs.length ? specs.join(', ') + ', ' : '') + `${e.qty} unit${e.qty>1?'s':''}`;
-        
-        doc.setFont('helvetica', 'bold');
-        const nameLines = doc.splitTextToSize(nm, pageWidth - 40);
-        nameLines.forEach((line, i) => {
-          doc.text(line, leftMargin, y + (i * 4));
-        });
-        y += nameLines.length * 4;
-        
+      if(e.qty > 1){
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7);
-        doc.setTextColor(80);
-        doc.text(specStr, leftMargin + 2, y);
-        y += 3;
-        
-        // Show conversions if needed
-        if(e.power && e.powerUnit !== 'kW'){
-          doc.text(`${e.power} ${e.powerUnit} -> ${kw.toFixed(3)} kW`, leftMargin + 2, y);
-          y += 3;
-        }
-        if(e.len && e.lenUnit !== 'm'){
-          doc.text(`${e.len} ${e.lenUnit} -> ${m.toFixed(3)} m`, leftMargin + 2, y);
-          y += 3;
-        }
-        if(e.vol && e.volUnit !== 'm3'){
-          doc.text(`${e.vol} ${e.volUnit} -> ${m3.toFixed(3)} m3`, leftMargin + 2, y);
-          y += 3;
-        }
-        if(e.wt && e.wtUnit !== 'ton'){
-          doc.text(`${e.wt} ${e.wtUnit} -> ${ton.toFixed(3)} ton`, leftMargin + 2, y);
-          y += 3;
-        }
-        
-        // Calculate fee breakdown
-        let calcResult;
-        const isFlat = cat in FLAT_RATES;
-        if(isFlat){
-          const r = FLAT_RATES[cat];
-          calcResult = { lines:[`₱${r.rate} per ${r.unit} (flat rate)`], perUnit:r.rate };
-        } else {
-          switch(cat){
-            case 'ventilation':        calcResult=feeVentilation(kw); break;
-            case 'pump':               calcResult=feePump(kw); break;
-            case 'boiler':             calcResult=feeBoiler(kw); break;
-            case 'generator':          calcResult=feeGenerator(kw); break;
-            case 'combustion':         calcResult=feeCombustion(kw); break;
-            case 'other-machinery':    calcResult=feeOtherMachinery(kw); break;
-            case 'escalator':          calcResult=feeEscalator(m); break;
-            case 'funicular':          calcResult=feeFunicular(kw,m); break;
-            case 'cable-car':          calcResult=feeCableCar(kw,m); break;
-            case 'passenger-elevator': calcResult=feeElevator(500, e.landings||0); break;
-            case 'freight-elevator':   calcResult=feeElevator(400, e.landings||0); break;
-            case 'dumbwaiter':         calcResult=feeElevator(50,  e.landings||0); break;
-            case 'piping':             calcResult=feePiping(m,m3); break;
-            case 'pressure-vessel':    calcResult=feePressureVessel(m3); break;
-            case 'conveyor':           calcResult=feeConveyor(m); break;
-            case 'weighing-scale':     calcResult=feeWeighingScale(ton); break;
-            default:                   calcResult={lines:[],perUnit:0};
-          }
-        }
-        
-        // Show tier breakdown lines
-        if(calcResult.lines && calcResult.lines.length > 0){
-          for(const line of calcResult.lines){
-            checkPageBreak(4);
-            // Extract text from HTML structure before stripping tags
-            // The line format is: <div...><span>CALCULATION</span><span>VALUE</span></div>
-            let cleanLine = line;
-            
-            // Remove opening tags and get content
-            cleanLine = cleanLine
-              .replace(/<div[^>]*>/g, '')
-              .replace(/<\/div>/g, '')
-              .replace(/<span class="eb-line-lbl">/g, '')
-              .replace(/<span class="eb-line-val">/g, '|EQUALS|') // Marker for equals
-              .replace(/<\/span>/g, '')
-              .replace(/&times;/g, ' x ')
-              .replace(/&mdash;/g, '-')
-              .replace(/&rarr;/g, '->')
-              .replace(/&#8369;/g, 'PHP ')
-              .replace(/₱/g, 'PHP ')
-              .replace(/roundup\(/g, 'roundup(')
-              .replace(/\|EQUALS\|/g, ' = ')
-              .replace(/\s+/g, ' ')
-              .trim();
-            
-            doc.text(cleanLine, leftMargin + 2, y);
-            y += 3;
-          }
-        }
-        
-        const entryTotal = calcResult.perUnit * e.qty;
-        
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(0);
-        doc.text(`Per Unit Total: PHP ${calcResult.perUnit.toFixed(2)}`, leftMargin + 2, y);
+        doc.text(`PHP ${calcResult.perUnit.toFixed(2)} x ${e.qty} units = PHP ${entryTotal.toFixed(2)}`, leftMargin + 2, y);
         y += 4;
-        
-        if(e.qty > 1){
-          doc.setFont('helvetica', 'normal');
-          doc.text(`PHP ${calcResult.perUnit.toFixed(2)} x ${e.qty} units = PHP ${entryTotal.toFixed(2)}`, leftMargin + 2, y);
-          y += 4;
-        }
-        
-        doc.setFont('helvetica', 'bold');
-        doc.text(`Entry Total: PHP ${entryTotal.toFixed(2)}`, leftMargin + 2, y);
-        y += 6;
       }
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Entry Total: PHP ${entryTotal.toFixed(2)}`, leftMargin + 2, y);
+      y += 6;
     }
     
-    y += 3;
+    // Category total row with units and metric
+    let totalText = `Total - ${label}: ${totalUnits} unit${totalUnits>1?'s':''}`;
+    if(metricLabel && totalMetric > 0){
+      const metricValue = totalMetric.toFixed(metricLabel.includes('kW') || metricLabel.includes('TR') ? 2 : 3);
+      totalText += `, ${metricValue} ${metricLabel}`;
+    }
+    totalText += ` = PHP ${catTotal.toFixed(2)}`;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text(totalText, leftMargin, y);
+    y += 8;
   }
   
   // Fee Summary
