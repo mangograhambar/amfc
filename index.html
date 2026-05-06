@@ -330,6 +330,34 @@ input:checked+.slider:before{transform:translateX(18px);}
   stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
   transition:stroke .2s;}
 .theme-toggle:hover .theme-icon{stroke:var(--text-primary);}
+
+/* MODAL */
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1000;display:flex;align-items:center;justify-content:center;}
+.modal-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);}
+.modal-content{position:relative;background:var(--surface1);border-radius:12px;max-width:500px;width:90%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
+.modal-header{padding:24px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-header h2{margin:0;font-size:20px;font-weight:600;color:var(--text-primary);}
+.modal-close{background:none;border:none;font-size:28px;color:var(--text-secondary);cursor:pointer;padding:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:6px;transition:background .2s,color .2s;}
+.modal-close:hover{background:var(--border-light);color:var(--text-primary);}
+.modal-body{padding:24px;}
+.modal-body .fg{margin-bottom:16px;}
+.modal-body .fg:last-child{margin-bottom:0;}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:12px;justify-content:flex-end;}
+
+/* SECONDARY BUTTON */
+.btn-secondary{background:var(--surface2);color:var(--text-primary);border:1px solid var(--border);padding:10px 20px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;}
+.btn-secondary:hover{background:var(--border-light);border-color:var(--text-secondary);}
+
+/* EQUIPMENT SUMMARY */
+.summary-block{margin-top:32px;padding:24px;background:var(--surface1);border:1px solid var(--border);border-radius:12px;}
+.summary-header{font-size:16px;font-weight:600;color:var(--text-primary);margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+.summary-table{display:grid;gap:8px;}
+.summary-row{display:grid;grid-template-columns:2fr 1fr 1.2fr 1fr;gap:16px;padding:8px 12px;background:var(--surface2);border-radius:6px;align-items:center;}
+.summary-cat{font-weight:500;color:var(--text-primary);}
+.summary-units{color:var(--text-secondary);font-size:14px;}
+.summary-capacity{color:var(--text-secondary);font-size:14px;font-family:'SF Mono',Monaco,monospace;}
+.summary-fee{text-align:right;font-weight:600;color:var(--accent);font-family:'SF Mono',Monaco,monospace;}
+
 </style>
 </head>
 <body>
@@ -356,6 +384,10 @@ input:checked+.slider:before{transform:translateX(18px);}
         <div class="fg">
           <label>Owner / Firm / Applicant</label>
           <input type="text" id="proj-owner">
+        </div>
+        <div class="fg">
+          <label>Business Identification Number</label>
+          <input type="text" id="proj-bin">
         </div>
         <div class="fg">
           <label>Date</label>
@@ -413,6 +445,7 @@ input:checked+.slider:before{transform:translateX(18px);}
           </select>
         </div>
 
+        <!-- Regular Entry Fields -->
         <div class="fg fg-desc">
           <label>Description</label>
           <input type="text" id="eq-desc">
@@ -480,6 +513,7 @@ input:checked+.slider:before{transform:translateX(18px);}
       <!-- Buttons -->
       <div class="btn-row">
         <button class="btn-add" onclick="addToList()">Add to List</button>
+        <button class="btn-secondary" onclick="openDirectEntry()">Direct Entry</button>
         <button class="btn-reset" onclick="resetAll()">Reset All</button>
       </div>
 
@@ -563,6 +597,23 @@ input:checked+.slider:before{transform:translateX(18px);}
         <div class="totals-val zero" id="disp-penalty">&#8369;0.00</div>
       </div>
 
+      <!-- Mayor's Permit Fee controls -->
+      <div class="sc-row">
+        <div class="sc-toggle-grp">
+          <label class="toggle"><input type="checkbox" id="mayor-toggle" onchange="onMayorToggle()"><span class="slider"></span></label>
+          <label for="mayor-toggle">Apply Mayor's Permit Fee (Deduction)</label>
+        </div>
+        <div class="sc-fld">
+          <label>Mayor's Permit Fee Amount (&#8369;)</label>
+          <input type="number" id="mayor-amount" min="0" step="0.01" disabled oninput="computeTotals()">
+        </div>
+      </div>
+
+      <div class="totals-row">
+        <div class="totals-lbl">Mayor's Permit Fee (Deduction)</div>
+        <div class="totals-val zero" id="disp-mayor">&#8369;0.00</div>
+      </div>
+
       <div class="totals-row grand">
         <div class="totals-lbl grand">TOTAL AMOUNT DUE</div>
         <div class="totals-val grand" id="disp-total">&#8369;0.00</div>
@@ -578,6 +629,90 @@ input:checked+.slider:before{transform:translateX(18px);}
     </div>
 
 </div><!-- /shell -->
+
+<!-- DIRECT ENTRY MODAL -->
+<div id="bulk-modal" class="modal" style="display:none;">
+  <div class="modal-overlay" onclick="closeDirectModal()"></div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Direct Entry</h2>
+      <button class="modal-close" onclick="closeDirectModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text-secondary);margin-bottom:20px;">
+        Enter total units, capacity, and fee directly (without calculation).
+      </p>
+      
+      <div class="fg">
+        <label>Equipment Category <span style="color:#9b2335;">*</span></label>
+        <select id="bulk-cat">
+          <option value="">Select Category</option>
+          <option value="centralized-ac">Centralized Air Conditioning</option>
+          <option value="packaged-ac">Packaged Air Conditioning</option>
+          <option value="ice-plant">Ice Plant</option>
+          <option value="refrigeration">Refrigeration</option>
+          <option value="window-ac">Window AC</option>
+          <option value="ventilation">Mechanical Ventilation</option>
+          <option value="pump">Pump</option>
+          <option value="escalator">Escalators / Moving Walks</option>
+          <option value="funicular">Funicular</option>
+          <option value="cable-car">Cable Car</option>
+          <option value="passenger-elevator">Passenger Elevator</option>
+          <option value="freight-elevator">Freight / Construction Elevator</option>
+          <option value="dumbwaiter">Motor Driven Dumbwaiter</option>
+          <option value="boiler">Boilers</option>
+          <option value="water-heater">Water Heater</option>
+          <option value="sprinkler">Automatic Fire Sprinkler</option>
+          <option value="generator">Generating Set</option>
+          <option value="compressed-air">Compressed Air / Vacuum / Gas Outlet</option>
+          <option value="piping">Piping</option>
+          <option value="combustion">Other Internal Combustion Engines</option>
+          <option value="other-machinery">Other Machinery</option>
+          <option value="pressure-vessel">Pressure Vessel</option>
+          <option value="conveyor">Conveyor</option>
+          <option value="weighing-scale">Weighing Scale</option>
+          <option value="pressure-gauge">Pressure Gauge</option>
+          <option value="gas-meter">Gas Meter Testing</option>
+          <option value="mechanical-ride">Mechanical Ride</option>
+        </select>
+      </div>
+      
+      <div class="fg">
+        <label>Description</label>
+        <input type="text" id="bulk-desc">
+      </div>
+      
+      <div class="fg">
+        <label>Total Units <span style="color:#9b2335;">*</span></label>
+        <input type="number" id="bulk-units" min="1" step="1" value="1">
+      </div>
+      
+      <div class="fg">
+        <label>Total Capacity <span style="color:#9b2335;">*</span></label>
+        <div class="input-w-unit">
+          <input type="number" id="bulk-capacity" min="0" step="0.001">
+          <select id="bulk-capacity-unit">
+            <option value="TR">TR</option>
+            <option value="kW">kW</option>
+            <option value="HP">HP</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="fg">
+        <label>Fee Amount <span style="color:#9b2335;">*</span></label>
+        <div class="input-w-unit">
+          <input type="number" id="bulk-fee" min="0" step="0.01" placeholder="0.00">
+          <span style="padding:0 12px;color:var(--text-secondary);">₱</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeDirectModal()">Cancel</button>
+      <button class="btn-add" onclick="addDirectEntry()">Add Entry</button>
+    </div>
+  </div>
+</div>
 
 <script>
 'use strict';
@@ -737,6 +872,58 @@ function onCatChange(){
   });
 }
 
+// DIRECT ENTRY MODAL FUNCTIONS
+function openDirectEntry(){
+  document.getElementById('bulk-modal').style.display = 'flex';
+}
+
+function closeDirectModal(){
+  document.getElementById('bulk-modal').style.display = 'none';
+  // Clear form
+  document.getElementById('bulk-cat').value = '';
+  document.getElementById('bulk-desc').value = '';
+  document.getElementById('bulk-units').value = '1';
+  document.getElementById('bulk-capacity').value = '';
+  document.getElementById('bulk-fee').value = '';
+}
+
+function addDirectEntry(){
+  const cat = document.getElementById('bulk-cat').value;
+  if(!cat){ alert('Please select an equipment category.'); return; }
+  
+  const bulkUnits = parseInt(document.getElementById('bulk-units').value) || 0;
+  const bulkCapacity = parseFloat(document.getElementById('bulk-capacity').value) || 0;
+  const bulkCapacityUnit = document.getElementById('bulk-capacity-unit').value;
+  const bulkFee = parseFloat(document.getElementById('bulk-fee').value) || 0;
+  const bulkDesc = document.getElementById('bulk-desc').value.trim();
+  
+  if(bulkUnits < 1){ alert('Please enter total units (at least 1).'); return; }
+  if(bulkCapacity <= 0){ alert('Please enter total capacity.'); return; }
+  if(bulkFee <= 0){ alert('Please enter the fee amount.'); return; }
+  
+  const desc = bulkDesc || `Direct Entry - ${bulkUnits} unit${bulkUnits>1?'s':''}, ${bulkCapacity} ${bulkCapacityUnit}`;
+  
+  const e = {
+    id: ++entryId,
+    cat,
+    qty: bulkUnits,
+    desc: desc,
+    isBulk: true,
+    bulkCapacity: bulkCapacity,
+    bulkCapacityUnit: bulkCapacityUnit,
+    bulkFee: bulkFee
+  };
+  
+  equipList.push(e);
+  renderEqList();
+  renderBreakdown();
+  closeDirectModal();
+}
+
+function onBulkModeChange(){
+  // This function is no longer used - kept for compatibility
+}
+
 // ── EQUIPMENT LIST STATE ─────────────────────────────────────────────────────
 let equipList = [];
 let entryId = 0;
@@ -744,6 +931,8 @@ let entryId = 0;
 function addToList(){
   const cat = document.getElementById('eq-category').value;
   if(!cat){ alert('Please select an equipment category.'); return; }
+  
+  // REGULAR ENTRY MODE - normal equipment entry
   const f = CAT_FIELDS[cat] || {};
   const qty = parseInt(document.getElementById('eq-qty').value) || 1;
   if(qty < 1){ alert('Quantity must be at least 1.'); return; }
@@ -807,6 +996,10 @@ function clearForm(){
   ['eq-power','eq-tr','eq-len','eq-vol','eq-wt','eq-landings'].forEach(id => {
     const el = document.getElementById(id); if(el) el.value = '';
   });
+  // Clear bulk entry fields
+  document.getElementById('bulk-units').value = '1';
+  document.getElementById('bulk-capacity').value = '';
+  document.getElementById('bulk-fee').value = '';
 }
 
 function deleteEntry(id){
@@ -1243,6 +1436,7 @@ function renderBreakdown(){
   const cats = CAT_ORDER.filter(c=>grouped[c]).concat(Object.keys(grouped).filter(c=>!CAT_ORDER.includes(c)));
 
   let html = '', grandTotal = 0;
+  const categoryTotals = {}; // Track total fee per category for summary
   
   // Separate TR categories from others
   const trCategories = ['centralized-ac','packaged-ac','ice-plant','refrigeration'];
@@ -1258,45 +1452,107 @@ function renderBreakdown(){
     const label = CAT_LABELS[cat];
     let bodyHtml = '';
     
-    const trList = entries.map(e => {
-      const rawTR = conv(e.trCap, e.trUnit, 'TR');
-      return { e, rawTR, totalTR: rawTR * e.qty };
-    });
-    const grandTR = trList.reduce((s,x) => s+x.totalTR, 0);
-    const totalUnits = entries.reduce((s,e) => s + e.qty, 0);
-
-    // Store summary for aggregation
-    trSummaries.push({ cat: label, units: totalUnits, tr: grandTR });
-
-    // Entry list
-    for(const {e,rawTR,totalTR} of trList){
-      const nm = e.desc || 'Unit';
-      let convNote = '';
-      if(e.trUnit !== 'TR')
-        convNote = `<div class="eb-convs"><span class="eb-conv">${e.trCap} ${e.trUnit} &rarr; ${rawTR.toFixed(3)} TR/unit</span></div>`;
-      const specStr = `${e.trCap} ${e.trUnit}, ${e.qty} unit${e.qty>1?'s':''}`;
+    // Separate bulk and regular entries
+    const bulkEntries = entries.filter(e => e.isBulk);
+    const regularEntries = entries.filter(e => !e.isBulk);
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // HANDLE BULK ENTRIES (no TR calculation, direct fee)
+    // ═══════════════════════════════════════════════════════════════════════════
+    let bulkTotal = 0;
+    let bulkUnits = 0;
+    for(const e of bulkEntries){
+      const nm = e.desc || 'Direct Entry';
+      bulkUnits += e.qty;
+      bulkTotal += e.bulkFee;
+      
+      const estimatedUnitCap = e.bulkCapacity / e.qty;
+      
       bodyHtml += `<div class="eb-wrap"><div class="eb">
         <div class="eb-hdr">
           <div class="eb-hdr-title">${nm}</div>
-          <div class="eb-hdr-sub">${specStr}</div>
         </div>
-        ${convNote}
         <div class="fee-lines">
-          ${fLine(`${e.qty} unit${e.qty>1?'s':''} &times; ${rawTR.toFixed(3)} TR/unit`, `${totalTR.toFixed(3)} TR`)}
+          ${fLine(`${e.qty} unit${e.qty>1?'s':''}, ${e.bulkCapacity} ${e.bulkCapacityUnit}`, '')}
+          ${fLine(`Estimated Unit Capacity = ${estimatedUnitCap.toFixed(2)} ${e.bulkCapacityUnit}`, '')}
+          ${fLine('Total', php2(e.bulkFee))}
         </div>
       </div></div>`;
     }
     
-    // Build category block with totals in bottom row (no fee shown for individual TR cats)
-    html += `<div class="cat-block">
-      <div class="cat-hdr">${label}</div>
-      <div class="cat-body">${bodyHtml}</div>
-      <div class="cat-total-row">
-        <div class="cat-total-lbl">Total &mdash; ${label}: ${totalUnits} unit${totalUnits>1?'s':''}, ${grandTR.toFixed(3)} TR</div>
-        <div class="cat-total-val"></div>
-      </div>
-    </div>`;
-  }
+    // ═══════════════════════════════════════════════════════════════════════════
+    // HANDLE REGULAR ENTRIES (with TR calculation)
+    // ═══════════════════════════════════════════════════════════════════════════
+    if(regularEntries.length > 0){
+      const trList = regularEntries.map(e => {
+        const rawTR = conv(e.trCap, e.trUnit, 'TR');
+        return { e, rawTR, totalTR: rawTR * e.qty };
+      });
+      const grandTR = trList.reduce((s,x) => s+x.totalTR, 0);
+      const totalUnits = regularEntries.reduce((s,e) => s + e.qty, 0);
+
+      // Store summary for TR aggregation (ONLY regular entries)
+      trSummaries.push({ cat: label, units: totalUnits, tr: grandTR });
+
+      // Entry list for regular entries
+      for(const {e,rawTR,totalTR} of trList){
+        const nm = e.desc || 'Unit';
+        let convNote = '';
+        if(e.trUnit !== 'TR')
+          convNote = `<div class="eb-convs"><span class="eb-conv">${e.trCap} ${e.trUnit} &rarr; ${rawTR.toFixed(3)} TR/unit</span></div>`;
+        const specStr = `${e.trCap} ${e.trUnit}, ${e.qty} unit${e.qty>1?'s':''}`;
+        bodyHtml += `<div class="eb-wrap"><div class="eb">
+          <div class="eb-hdr">
+            <div class="eb-hdr-title">${nm}</div>
+            <div class="eb-hdr-sub">${specStr}</div>
+          </div>
+          ${convNote}
+          <div class="fee-lines">
+            ${fLine(`${e.qty} unit${e.qty>1?'s':''} &times; ${rawTR.toFixed(3)} TR/unit`, `${totalTR.toFixed(3)} TR`)}
+          </div>
+        </div></div>`;
+      }
+    } // Close if(regularEntries.length > 0)
+    
+    // Build category block (combining bulk + regular if both exist)
+    const totalUnitsAll = bulkUnits + (regularEntries.length > 0 ? regularEntries.reduce((s,e) => s + e.qty, 0) : 0);
+    
+    if(bulkEntries.length > 0 && regularEntries.length === 0){
+      // ONLY bulk - show with bulk fee
+      html += `<div class="cat-block">
+        <div class="cat-hdr">${label}</div>
+        <div class="cat-body">${bodyHtml}</div>
+        <div class="cat-total-row">
+          <div class="cat-total-lbl">Total &mdash; ${label}: ${bulkUnits} unit${bulkUnits>1?'s':''} (bulk entry)</div>
+          <div class="cat-total-val">${php2(bulkTotal)}</div>
+        </div>
+      </div>`;
+      grandTotal += bulkTotal;
+      categoryTotals[label] = bulkTotal; // Track bulk-only TR category fee
+    } else if(regularEntries.length > 0){
+      // Has regular (may also have bulk) - show TR, fee in aggregation
+      const grandTR = regularEntries.map(e => {
+        const rawTR = conv(e.trCap, e.trUnit, 'TR');
+        return rawTR * e.qty;
+      }).reduce((s,x) => s+x, 0);
+      
+      let totalLabel = `Total &mdash; ${label}: ${totalUnitsAll} unit${totalUnitsAll>1?'s':''}`;
+      if(bulkEntries.length > 0){
+        totalLabel += ` (${regularEntries.reduce((s,e)=>s+e.qty,0)} calculated, ${bulkUnits} bulk)`;
+      }
+      totalLabel += `, ${grandTR.toFixed(3)} TR`;
+      
+      html += `<div class="cat-block">
+        <div class="cat-hdr">${label}</div>
+        <div class="cat-body">${bodyHtml}</div>
+        <div class="cat-total-row">
+          <div class="cat-total-lbl">${totalLabel}</div>
+          <div class="cat-total-val">${bulkEntries.length > 0 ? php2(bulkTotal) : ''}</div>
+        </div>
+      </div>`;
+      if(bulkEntries.length > 0) grandTotal += bulkTotal;
+    }
+  } // Close for(const cat of trCats)
 
   // ═══════════════════════════════════════════════════════════════════════════
   // SECTION 2: RENDER TR AGGREGATION
@@ -1330,6 +1586,17 @@ function renderBreakdown(){
     </div>`;
     
     grandTotal += trFee;
+    
+    // Distribute TR fee proportionally to each category based on TR contribution
+    for(const summary of trSummaries){
+      const proportion = summary.tr / totalTR;
+      const categoryShare = trFee * proportion;
+      if(categoryTotals[summary.cat]){
+        categoryTotals[summary.cat] += categoryShare; // Add to existing bulk fee
+      } else {
+        categoryTotals[summary.cat] = categoryShare;
+      }
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1348,6 +1615,32 @@ function renderBreakdown(){
     
     for(const e of entries){
       const nm = e.desc || 'Unit';
+      
+      // ═══════════════════════════════════════════════════════════════════════════
+      // BULK ENTRY HANDLING (for PTO renewals)
+      // ═══════════════════════════════════════════════════════════════════════════
+      if(e.isBulk){
+        totalUnits += e.qty;
+        const bulkTotal = e.bulkFee;
+        catTotal += bulkTotal;
+        const estimatedUnitCap = e.bulkCapacity / e.qty;
+        
+        bodyHtml += `<div class="eb-wrap"><div class="eb">
+          <div class="eb-hdr">
+            <div class="eb-hdr-title">${nm}</div>
+          </div>
+          <div class="fee-lines">
+            ${fLine(`${e.qty} unit${e.qty>1?'s':''}, ${e.bulkCapacity} ${e.bulkCapacityUnit}`, '')}
+            ${fLine(`Estimated Unit Capacity = ${estimatedUnitCap.toFixed(2)} ${e.bulkCapacityUnit}`, '')}
+            ${fLine('Total', php2(bulkTotal))}
+          </div>
+        </div></div>`;
+        continue; // Skip regular processing
+      }
+      
+      // ═══════════════════════════════════════════════════════════════════════════
+      // REGULAR ENTRY HANDLING
+      // ═══════════════════════════════════════════════════════════════════════════
       let convs = [], kw=0, m=0, m3=0, ton=0, calcResult, partial=false;
 
       totalUnits += e.qty;
@@ -1453,6 +1746,7 @@ function renderBreakdown(){
     }
     
     grandTotal += catTotal;
+    categoryTotals[label] = catTotal; // Track for equipment summary
     
     // Build total label with units and metric
     let totalLabel = `Total &mdash; ${label}: ${totalUnits} unit${totalUnits>1?'s':''}`;
@@ -1482,6 +1776,106 @@ function renderBreakdown(){
     </div>`;
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EQUIPMENT SUMMARY - Total units, capacity, and fees per category
+  // ═══════════════════════════════════════════════════════════════════════════
+  if(equipList.length > 0){
+    // Build summary from grouped data
+    let summaryHtml = '<div class="summary-block">';
+    summaryHtml += '<div class="summary-header">Equipment Summary</div>';
+    summaryHtml += '<div class="summary-table">';
+    
+    // Merge TR categories
+    const trCategories = ['centralized-ac','packaged-ac','ice-plant','refrigeration'];
+    let trMergedUnits = 0;
+    let trMergedCapacity = 0;
+    let trMergedFee = 0;
+    let trHasDirectEntry = false;
+    
+    for(const cat in grouped){
+      if(trCategories.includes(cat)){
+        const entries = grouped[cat];
+        trMergedUnits += entries.reduce((sum, e) => sum + e.qty, 0);
+        
+        for(const e of entries){
+          if(e.isBulk){
+            trMergedCapacity += e.bulkCapacity;
+            trHasDirectEntry = true;
+          } else {
+            if(e.trCap !== undefined){
+              trMergedCapacity += e.trCap * e.qty;
+            }
+          }
+        }
+        
+        const catFee = categoryTotals[CAT_LABELS[cat]] || 0;
+        trMergedFee += catFee;
+      }
+    }
+    
+    // Add merged TR category first if it exists
+    if(trMergedUnits > 0){
+      const directLabel = trHasDirectEntry ? ' <span style="font-size:11px;color:var(--text-secondary);">(Direct Entry)</span>' : '';
+      summaryHtml += `<div class="summary-row">
+        <div class="summary-cat">Air Conditioning/Refrigeration${directLabel}</div>
+        <div class="summary-units">${trMergedUnits} unit${trMergedUnits>1?'s':''}</div>
+        <div class="summary-capacity">${trMergedCapacity.toFixed(3)} TR</div>
+        <div class="summary-fee">${php2(trMergedFee)}</div>
+      </div>`;
+    }
+    
+    // Add all other non-TR categories
+    for(const cat in grouped){
+      if(trCategories.includes(cat)) continue; // Skip TR categories (already merged)
+      
+      const label = CAT_LABELS[cat];
+      const entries = grouped[cat];
+      const totalUnits = entries.reduce((sum, e) => sum + e.qty, 0);
+      
+      // Calculate total capacity and check for direct entries
+      let totalCapacity = 0;
+      let capacityUnit = '';
+      let hasDirectEntry = false;
+      
+      for(const e of entries){
+        if(e.isBulk){
+          totalCapacity += e.bulkCapacity;
+          capacityUnit = e.bulkCapacityUnit;
+          hasDirectEntry = true;
+        } else {
+          // For regular entries, get capacity from equipment data
+          if(e.power !== undefined){
+            totalCapacity += e.power * e.qty;
+            capacityUnit = e.powerUnit || 'kW';
+          } else if(e.trCap !== undefined){
+            totalCapacity += e.trCap * e.qty;
+            capacityUnit = e.trUnit || 'TR';
+          }
+        }
+      }
+      
+      let capacityDisplay = '';
+      if(totalCapacity > 0){
+        capacityDisplay = `${totalCapacity.toFixed(3)} ${capacityUnit}`;
+      }
+      
+      // Get total fee from categoryTotals tracking
+      const totalFee = categoryTotals[label] || 0;
+      
+      const directLabel = hasDirectEntry ? ' <span style="font-size:11px;color:var(--text-secondary);">(Direct Entry)</span>' : '';
+      
+      summaryHtml += `<div class="summary-row">
+        <div class="summary-cat">${label}${directLabel}</div>
+        <div class="summary-units">${totalUnits} unit${totalUnits>1?'s':''}</div>
+        <div class="summary-capacity">${capacityDisplay || '—'}</div>
+        <div class="summary-fee">${totalFee > 0 ? php2(totalFee) : '—'}</div>
+      </div>`;
+    }
+    
+    summaryHtml += '</div></div>';
+    html += summaryHtml;
+  }
+
   bdBody.innerHTML = html;
   currentBaseFee = grandTotal;
   computeTotals();
@@ -1505,6 +1899,13 @@ function onPenToggle(){
   const on = document.getElementById('pen-toggle').checked;
   document.getElementById('pen-amount').disabled = !on;
   if(!on) document.getElementById('pen-amount').value = '';
+  computeTotals();
+}
+
+function onMayorToggle(){
+  const on = document.getElementById('mayor-toggle').checked;
+  document.getElementById('mayor-amount').disabled = !on;
+  if(!on) document.getElementById('mayor-amount').value = '';
   computeTotals();
 }
 
@@ -1570,6 +1971,7 @@ function computeTotals(){
   }
 
   // ── SURCHARGE (100% ADDITIONAL) ──
+  // Surcharge is calculated from ORIGINAL base (before mayor's fee deduction)
   // Only applies if toggle is ON AND payment is actually late
   const scOn = document.getElementById('sc-toggle').checked;
   let isLate = false;
@@ -1586,19 +1988,29 @@ function computeTotals(){
       isLate = curr > expiry;
     }
   }
-  
-  // Apply surcharge only if toggle is ON and payment is late
+
+  // Calculate surcharge from ORIGINAL base (before mayor's fee deduction)
   if(scOn && isLate){
-    surcharge = runningTotal; // 100% of whatever the current total is
-    runningTotal += surcharge;
+    surcharge = runningTotal; // 100% of original base
   }
+
+  // ── MAYOR'S PERMIT FEE (DEDUCTION) ──
+  let mayorFee = 0;
+  const mayorToggle = document.getElementById('mayor-toggle');
+  const mayorAmount = document.getElementById('mayor-amount');
+  if(mayorToggle && mayorToggle.checked && mayorAmount)
+    mayorFee = parseFloat(mayorAmount.value) || 0;
+
+  // Deduct mayor's fee from base
+  const baseAfterMayor = Math.max(0, runningTotal - mayorFee);
 
   // ── PENALTY ──
   let penalty = 0;
   if(document.getElementById('pen-toggle').checked)
     penalty = parseFloat(document.getElementById('pen-amount').value) || 0;
 
-  const total = runningTotal + penalty;
+  // Total = (base - mayor's fee) + surcharge + penalty
+  const total = baseAfterMayor + surcharge + penalty;
 
   // ── UPDATE DISPLAY ──
   document.getElementById('disp-base').innerHTML = php1(F);
@@ -1611,6 +2023,11 @@ function computeTotals(){
   const ymEl = document.getElementById('disp-years-mult');
   ymEl.innerHTML = php2(feeAfterYears);
   ymEl.className = 'totals-val' + (feeAfterYears>0 ? '' : ' zero');
+  
+  const mEl = document.getElementById('disp-mayor');
+  mEl.innerHTML = mayorFee > 0 ? `- ${php2(mayorFee)}` : php2(mayorFee);
+  mEl.className = 'totals-val' + (mayorFee>0 ? '' : ' zero');
+  mEl.style.color = mayorFee>0 ? '#9b2335' : '';
   
   const scEl = document.getElementById('disp-surcharge');
   scEl.innerHTML = php2(surcharge);
@@ -1632,9 +2049,10 @@ function resetAll(){
   const yearsToggle = document.getElementById('years-toggle').checked;
   const scToggle = document.getElementById('sc-toggle').checked;
   const penToggle = document.getElementById('pen-toggle').checked;
+  const mayorToggle = document.getElementById('mayor-toggle').checked;
   
   // Only show confirmation if there's data that would be lost
-  if(hasEquipment || yearsToggle || scToggle || penToggle){
+  if(hasEquipment || yearsToggle || scToggle || penToggle || mayorToggle){
     const confirmed = confirm('Reset All Data?\n\nThis will permanently erase all equipment entries, dates issued, fees, penalties, and surcharges. This action cannot be undone.');
     if(!confirmed){
       return; // User cancelled, exit function
@@ -1653,9 +2071,11 @@ function resetAll(){
   document.getElementById('years-toggle').checked=false;
   document.getElementById('sc-toggle').checked=false;
   document.getElementById('pen-toggle').checked=false;
+  document.getElementById('mayor-toggle').checked=false;
   document.getElementById('years-prev-date').disabled=true; document.getElementById('years-prev-date').value='';
   document.getElementById('years-curr-date').disabled=true; document.getElementById('years-curr-date').value='';
   document.getElementById('pen-amount').disabled=true;   document.getElementById('pen-amount').value='';
+  document.getElementById('mayor-amount').disabled=true;   document.getElementById('mayor-amount').value='';
   document.getElementById('years-bd').style.display='none';
   document.getElementById('years-tag').textContent='';
   currentBaseFee=0;
@@ -1712,6 +2132,7 @@ function exportPDF(){
   doc.setFont('helvetica', 'normal');
   
   const projOwner = document.getElementById('proj-owner').value || 'N/A';
+  const projBin = document.getElementById('proj-bin').value || 'N/A';
   const projDate = document.getElementById('proj-date').value || new Date().toISOString().split('T')[0];
   const projName = document.getElementById('proj-name').value || 'N/A';
   const projLoc = document.getElementById('proj-location').value || 'N/A';
@@ -1733,6 +2154,12 @@ function exportPDF(){
     doc.text(line, leftMargin + 60, y + (i * 5));
   });
   y += ownerLines.length * 5 + 1;
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('BIN:', leftMargin, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(projBin, leftMargin + 60, y);
+  y += 6;
   
   doc.setFont('helvetica', 'bold');
   doc.text('Date:', leftMargin, y);
@@ -1786,6 +2213,9 @@ function exportPDF(){
     grouped[e.cat].push(e);
   }
   
+  // Track category totals for Equipment Summary
+  const categoryTotals = {};
+  
   // Use same category order as calculator
   const cats = CAT_ORDER.filter(c=>grouped[c]).concat(Object.keys(grouped).filter(c=>!CAT_ORDER.includes(c)));
   
@@ -1813,6 +2243,54 @@ function exportPDF(){
     
     doc.setFontSize(8);
     
+    // Check if any entries are bulk entries
+    const hasBulk = entries.some(e => e.isBulk);
+    
+    if(hasBulk){
+      // Handle bulk entries (no TR aggregation)
+      let bulkTotal = 0;
+      let bulkUnits = 0;
+      
+      for(const e of entries){
+        if(e.isBulk){
+          checkPageBreak(15);
+          const nm = e.desc || 'Direct Entry';
+          bulkUnits += e.qty;
+          bulkTotal += e.bulkFee;
+          const estimatedUnitCap = e.bulkCapacity / e.qty;
+          
+          doc.setFont('helvetica', 'bold');
+          const nameLines = doc.splitTextToSize(nm, pageWidth - 40);
+          nameLines.forEach((line, i) => {
+            doc.text(line, leftMargin, y + (i * 4));
+          });
+          y += nameLines.length * 4;
+          
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7);
+          doc.setTextColor(80);
+          doc.text(`${e.qty} unit${e.qty>1?'s':''}, ${e.bulkCapacity} ${e.bulkCapacityUnit}`, leftMargin + 2, y);
+          y += 3;
+          doc.text(`Estimated Unit Capacity = ${estimatedUnitCap.toFixed(2)} ${e.bulkCapacityUnit}`, leftMargin + 2, y);
+          y += 3;
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(0);
+          doc.text(`Total = PHP ${e.bulkFee.toFixed(3)}`, leftMargin + 2, y);
+          y += 6;
+        }
+      }
+      
+      // Category total row
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Total - ${label}: ${bulkUnits} unit${bulkUnits>1?'s':''} (direct) = PHP ${bulkTotal.toFixed(3)}`, leftMargin, y);
+      y += 8;
+      grandTotal += bulkTotal;
+      categoryTotals[label] = bulkTotal; // Track for Equipment Summary
+      continue; // Skip regular TR processing
+    }
+    
+    // Regular TR processing (non-bulk entries)
     const trList = entries.map(e => {
       const rawTR = conv(e.trCap, e.trUnit, 'TR');
       return { e, rawTR, totalTR: rawTR * e.qty };
@@ -1916,6 +2394,17 @@ function exportPDF(){
     doc.setTextColor(0);
     doc.text(`Total - Air Conditioning/Refrigeration: ${totalTRUnits} unit${totalTRUnits>1?'s':''}, ${totalTR.toFixed(3)} TR = PHP ${trFee.toFixed(3)}`, leftMargin, y);
     y += 10;
+    
+    // Distribute TR fee proportionally to each category for Equipment Summary
+    for(const summary of trSummaries){
+      const proportion = summary.tr / totalTR;
+      const categoryShare = trFee * proportion;
+      if(categoryTotals[summary.cat]){
+        categoryTotals[summary.cat] += categoryShare; // Add to existing bulk fee
+      } else {
+        categoryTotals[summary.cat] = categoryShare;
+      }
+    }
   }
   
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1947,6 +2436,41 @@ function exportPDF(){
       checkPageBreak(25);
       
       const nm = e.desc || 'Unit';
+      
+      // ═══════════════════════════════════════════════════════════════════════════
+      // BULK ENTRY HANDLING (for PTO renewals)
+      // ═══════════════════════════════════════════════════════════════════════════
+      if(e.isBulk){
+        totalUnits += e.qty;
+        const bulkTotal = e.bulkFee;
+        catTotal += bulkTotal;
+        const estimatedUnitCap = e.bulkCapacity / e.qty;
+        
+        doc.setFont('helvetica', 'bold');
+        const nameLines = doc.splitTextToSize(nm, pageWidth - 40);
+        nameLines.forEach((line, i) => {
+          doc.text(line, leftMargin, y + (i * 4));
+        });
+        y += nameLines.length * 4;
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(80);
+        doc.text(`${e.qty} unit${e.qty>1?'s':''}, ${e.bulkCapacity} ${e.bulkCapacityUnit}`, leftMargin + 2, y);
+        y += 3;
+        doc.text(`Estimated Unit Capacity = ${estimatedUnitCap.toFixed(2)} ${e.bulkCapacityUnit}`, leftMargin + 2, y);
+        y += 3;
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0);
+        doc.text(`Total = PHP ${bulkTotal.toFixed(3)}`, leftMargin + 2, y);
+        y += 6;
+        continue; // Skip regular processing
+      }
+      
+      // ═══════════════════════════════════════════════════════════════════════════
+      // REGULAR ENTRY HANDLING
+      // ═══════════════════════════════════════════════════════════════════════════
       let kw=0, m=0, m3=0, ton=0;
       
       totalUnits += e.qty;
@@ -2121,6 +2645,117 @@ function exportPDF(){
     doc.setFont('helvetica', 'bold');
     doc.text(totalText, leftMargin, y);
     y += 8;
+    
+    // Track category total for Equipment Summary
+    categoryTotals[label] = catTotal;
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EQUIPMENT SUMMARY (in PDF)
+  // ═══════════════════════════════════════════════════════════════════════════
+  if(equipList.length > 0){
+    y += 5;
+    checkPageBreak(30);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setFillColor(245, 245, 247);
+    doc.rect(leftMargin, y-4, pageWidth-40, 8, 'F');
+    doc.text('Equipment Summary', leftMargin+2, y+2);
+    y += 10;
+    
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    
+    // Merge TR categories
+    const trCategories = ['centralized-ac','packaged-ac','ice-plant','refrigeration'];
+    let trMergedUnits = 0;
+    let trMergedCapacity = 0;
+    let trMergedFee = 0;
+    let trHasDirectEntry = false;
+    
+    for(const cat in grouped){
+      if(trCategories.includes(cat)){
+        const entries = grouped[cat];
+        trMergedUnits += entries.reduce((sum, e) => sum + e.qty, 0);
+        
+        for(const e of entries){
+          if(e.isBulk){
+            trMergedCapacity += e.bulkCapacity;
+            trHasDirectEntry = true;
+          } else {
+            if(e.trCap !== undefined){
+              trMergedCapacity += e.trCap * e.qty;
+            }
+          }
+        }
+        
+        // Get fee from categoryTotals
+        const label = CAT_LABELS[cat];
+        const catFee = categoryTotals[label] || 0;
+        trMergedFee += catFee;
+      }
+    }
+    
+    // Add merged TR category first if it exists
+    if(trMergedUnits > 0){
+      checkPageBreak(5);
+      const directLabel = trHasDirectEntry ? ' (Direct Entry)' : '';
+      const categoryName = `Air Conditioning/Refrigeration${directLabel}`;
+      
+      doc.text(categoryName, leftMargin, y);
+      doc.text(`${trMergedUnits} unit${trMergedUnits>1?'s':''}`, leftMargin + 60, y);
+      doc.text(`${trMergedCapacity.toFixed(3)} TR`, leftMargin + 95, y);
+      doc.text(`PHP ${trMergedFee.toFixed(3)}`, pageWidth-leftMargin, y, {align: 'right'});
+      y += 5;
+    }
+    
+    // Add all other non-TR categories
+    for(const cat in grouped){
+      if(trCategories.includes(cat)) continue; // Skip TR categories (already merged)
+      
+      checkPageBreak(5);
+      const label = CAT_LABELS[cat];
+      const entries = grouped[cat];
+      const totalUnits = entries.reduce((sum, e) => sum + e.qty, 0);
+      
+      // Calculate total capacity and check for direct entries
+      let totalCapacity = 0;
+      let capacityUnit = '';
+      let hasDirectEntry = false;
+      
+      for(const e of entries){
+        if(e.isBulk){
+          totalCapacity += e.bulkCapacity;
+          capacityUnit = e.bulkCapacityUnit;
+          hasDirectEntry = true;
+        } else {
+          if(e.power !== undefined){
+            totalCapacity += e.power * e.qty;
+            capacityUnit = e.powerUnit || 'kW';
+          } else if(e.trCap !== undefined){
+            totalCapacity += e.trCap * e.qty;
+            capacityUnit = e.trUnit || 'TR';
+          }
+        }
+      }
+      
+      let capacityDisplay = totalCapacity > 0 ? `${totalCapacity.toFixed(3)} ${capacityUnit}` : '—';
+      
+      // Get total fee from categoryTotals
+      const totalFee = categoryTotals[label] || 0;
+      let feeDisplay = totalFee > 0 ? `PHP ${totalFee.toFixed(3)}` : '—';
+      
+      const directLabel = hasDirectEntry ? ' (Direct Entry)' : '';
+      const categoryName = `${label}${directLabel}`;
+      
+      doc.text(categoryName, leftMargin, y);
+      doc.text(`${totalUnits} unit${totalUnits>1?'s':''}`, leftMargin + 60, y);
+      doc.text(capacityDisplay, leftMargin + 95, y);
+      doc.text(feeDisplay, pageWidth-leftMargin, y, {align: 'right'});
+      y += 5;
+    }
+    
+    y += 3;
   }
   
   // Fee Summary
@@ -2195,6 +2830,19 @@ function exportPDF(){
     doc.text('Surcharge (100%)', leftMargin, y);
     doc.text(`PHP ${surcharge.toFixed(3)}`, pageWidth-leftMargin, y, {align: 'right'});
     y += 6;
+  }
+  
+  // Mayor's Permit Fee (Deduction)
+  const mayorToggle = document.getElementById('mayor-toggle');
+  const mayorAmount = document.getElementById('mayor-amount');
+  let mayorFee = 0;
+  if(mayorToggle && mayorToggle.checked && mayorAmount){
+    mayorFee = parseFloat(mayorAmount.value) || 0;
+    if(mayorFee > 0){
+      doc.text('Mayor\'s Permit Fee (Deduction)', leftMargin, y);
+      doc.text(`- PHP ${mayorFee.toFixed(3)}`, pageWidth-leftMargin, y, {align: 'right'});
+      y += 6;
+    }
   }
   
   // Penalty
