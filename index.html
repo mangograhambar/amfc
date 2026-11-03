@@ -722,10 +722,10 @@ input[type="date"]{height:35px;}
 </div><div id="xr"></div><button type="button" class="add" onclick="addX('xr')">+ Other details</button></section>
 
 <section class="card"><h2>Inspector</h2>
-<select id="insn"><option>ENGR. IAN GEOFFREY CATCHILLAR</option><option>ENGR. EULO KARLO CABANSAG</option><option>ENGR. ARVIN C. SANTIAGO</option><option>ENGR. MARC KENNETH T. BEA</option></select>
+<select id="insn"><option>ENGR. IAN GEOFFREY P. CATCHILLAR</option><option>ENGR. EULO KARLO D. CABANSAG</option><option>ENGR. ARVIN C. SANTIAGO</option><option>ENGR. MARC KENNETH T. BEA</option></select>
 </section>
 </main>
-<div class="bar"><div class="wrap"><div id="msg" role="status"></div><button type="button" class="go" id="go" onclick="generate()">Generate PDF</button></div></div>
+<div class="bar"><div class="wrap"><div id="msg" role="status"></div><button type="button" class="add" style="color:var(--red)" onclick="resetReport()">Reset All</button><button type="button" class="go" id="go" onclick="generate()">Generate PDF</button></div></div>
 </div>
 </div><!-- /view-rep -->
 
@@ -2550,10 +2550,23 @@ function validate(){
     let ok=0;
     [...$(id).children].forEach(r=>{const a=r.querySelector('.a'),b=r.querySelector('.b');
       if(a.value.trim()&&b.value)ok++;else if(a.value.trim()||b.value)bad(a.value.trim()?b:a)});
-    if(!ok){if(!$(id).children.length)addRow(id);bad($(id).firstElementChild.querySelector('.a'))}
+    if(!ok){if(!$(id).children.length){if(id==='exp')addFind();else addRow(id)}bad($(id).firstElementChild.querySelector('.a'))}
   });
   if(first){say('Please complete the highlighted fields.',0);first.scrollIntoView({block:'center',behavior:'smooth'});return false}
   return true}
+function resetReport(){
+  const has=[...document.querySelectorAll('#rep input, #rep textarea')].some(e=>e.id!=='date'&&e.value.trim())
+    ||document.querySelectorAll('#xc textarea,#xa textarea,#xf textarea,#xr textarea').length>0;
+  if(has&&!confirm('Reset All Data?\n\nThis will permanently erase everything entered in the Inspection Report. This action cannot be undone.'))return;
+  document.querySelectorAll('#rep input, #rep textarea').forEach(e=>{e.value=''});
+  document.querySelectorAll('#rep select').forEach(s=>{s.selectedIndex=0});
+  ['xc','xa','xf','xr','exp','cogr'].forEach(id=>{$(id).innerHTML=''});
+  addFind();addRow('cogr');
+  const t=new Date();$('date').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+  const sw=document.getElementById('surspecw');if(sw)sw.style.display='none';
+  document.querySelectorAll('.bad').forEach(e=>e.classList.remove('bad'));
+  say('All fields were reset.',1);
+}
 async function generate(){
   say('');
   if(!validate())return;$('go').disabled=true;
